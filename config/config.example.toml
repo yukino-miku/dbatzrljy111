@@ -1,0 +1,10 @@
+[paths]
+raw_data = "data/raw"
+processed_data = "data/processed"
+figures = "outputs/figures"
+tables = "outputs/tables"
+logs = "outputs/logs"
+
+[simulation]
+default_time_step_seconds = 60
+

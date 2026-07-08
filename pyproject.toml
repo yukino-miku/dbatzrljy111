@@ -1,0 +1,10 @@
+[project]
+name = "starlink-low-orbit-modeling"
+version = "0.1.0"
+description = "Math modeling workspace for low Earth orbit satellite constellation analysis."
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+

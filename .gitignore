@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Temporary outputs
+*.tmp
+*.bak
+~$*
+outputs/logs/*.log
+outputs/tmp/
+data/processed/cache/
+
+# Keep private raw material out of Git unless explicitly reviewed.
+data/raw/private/
+
