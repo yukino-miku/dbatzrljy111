@@ -12,11 +12,13 @@ On Windows, if ``python`` points to the Microsoft Store launcher, use:
 from __future__ import annotations
 
 import math
-import shutil
+import warnings
 from pathlib import Path
 from typing import Iterable
 
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as font_manager
+from matplotlib.lines import Line2D
 import numpy as np
 import pandas as pd
 
@@ -56,6 +58,40 @@ def rad2deg(value_rad: float | np.ndarray) -> float | np.ndarray:
 def wrap_to_pi(angle_rad: np.ndarray | float) -> np.ndarray | float:
     """Wrap longitude-like angles to [-pi, pi]."""
     return (np.asarray(angle_rad) + math.pi) % (2.0 * math.pi) - math.pi
+
+
+def configure_chinese_font() -> str | None:
+    """Configure Matplotlib to use an available Chinese font.
+
+    The function is intentionally non-fatal. If no Chinese font is found, plots
+    are still generated and a warning tells the user why Chinese glyphs may not
+    render correctly on that machine.
+    """
+    preferred_fonts = [
+        "Microsoft YaHei",
+        "SimHei",
+        "Noto Sans CJK SC",
+        "Source Han Sans SC",
+        "Arial Unicode MS",
+    ]
+    available_fonts = {font.name for font in font_manager.fontManager.ttflist}
+    selected = next((name for name in preferred_fonts if name in available_fonts), None)
+
+    if selected is None:
+        warnings.warn(
+            "未找到常见中文字体，图中文字可能无法正常显示；"
+            "建议安装 Microsoft YaHei、SimHei、Noto Sans CJK SC 或 Source Han Sans SC。",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+    else:
+        plt.rcParams["font.sans-serif"] = [selected] + [
+            name for name in plt.rcParams.get("font.sans-serif", []) if name != selected
+        ]
+        plt.rcParams["font.family"] = "sans-serif"
+
+    plt.rcParams["axes.unicode_minus"] = False
+    return selected
 
 
 def mean_motion_rad_s(
@@ -267,6 +303,12 @@ def evaluate_latitude_coverage(
     band_width = band_hi - band_lo
     coverage = np.clip(union_lengths / band_width, 0.0, 1.0)
     overlap_ratio = overlap_lengths / band_width
+    normalized_overlap_series = np.divide(
+        overlap_lengths,
+        summed_lengths,
+        out=np.zeros_like(overlap_lengths),
+        where=summed_lengths > 0.0,
+    )
     full_covered = coverage >= 1.0 - tol
 
     metrics: dict[str, float | int | np.ndarray] = {
@@ -277,6 +319,7 @@ def evaluate_latitude_coverage(
         "mean_coverage": float(np.mean(coverage)),
         "full_coverage_time_ratio": float(np.mean(full_covered)),
         "mean_overlap_ratio": float(np.mean(overlap_ratio)),
+        "normalized_overlap_ratio": float(np.mean(normalized_overlap_series)),
         "max_gap_time_min": float(
             max_periodic_false_gap_minutes(full_covered, period_seconds)
         ),
@@ -289,6 +332,7 @@ def evaluate_latitude_coverage(
                 "time_seconds": time_seconds,
                 "coverage_series": coverage,
                 "overlap_series": overlap_ratio,
+                "normalized_overlap_series": normalized_overlap_series,
                 "latitudes_rad": latitudes,
                 "summed_lengths_rad": summed_lengths,
                 "union_lengths_rad": union_lengths,
@@ -401,6 +445,9 @@ def scan_inclinations(
                         metrics["full_coverage_time_ratio"]
                     ),
                     "mean_overlap_ratio": float(metrics["mean_overlap_ratio"]),
+                    "normalized_overlap_ratio": float(
+                        metrics["normalized_overlap_ratio"]
+                    ),
                     "max_gap_time_min": float(metrics["max_gap_time_min"]),
                 }
             )
@@ -423,6 +470,11 @@ def scan_inclinations(
                     if best_metrics is None
                     else float(best_metrics["mean_overlap_ratio"])
                 ),
+                "normalized_overlap_at_N_min": (
+                    np.nan
+                    if best_metrics is None
+                    else float(best_metrics["normalized_overlap_ratio"])
+                ),
                 "max_gap_time_min_at_N_min": (
                     np.nan if best_metrics is None else float(best_metrics["max_gap_time_min"])
                 ),
@@ -433,11 +485,11 @@ def scan_inclinations(
 
 
 def _set_plot_style() -> None:
+    configure_chinese_font()
     plt.rcParams.update(
         {
             "figure.dpi": 120,
             "savefig.dpi": 300,
-            "font.family": "DejaVu Sans",
             "axes.grid": True,
             "grid.alpha": 0.28,
             "axes.unicode_minus": False,
@@ -461,7 +513,7 @@ def plot_single_satellite_geometry(theta: float, alpha_rad: float, output_dir: P
         color="#bbbbbb",
         lw=1.0,
         ls="--",
-        label="Circular orbit",
+        label="圆轨道",
     )
 
     O = np.array([0.0, 0.0])
@@ -471,8 +523,8 @@ def plot_single_satellite_geometry(theta: float, alpha_rad: float, output_dir: P
 
     ax.plot([O[0], P[0]], [O[1], P[1]], color="#333333", lw=1.5)
     ax.plot([O[0], G[0]], [O[1], G[1]], color="#333333", lw=1.2)
-    ax.plot([S[0], P[0]], [S[1], P[1]], color="#984ea3", lw=1.8, label="Nadir")
-    ax.plot([S[0], G[0]], [S[1], G[1]], color="#e41a1c", lw=1.8, label="Cone boundary")
+    ax.plot([S[0], P[0]], [S[1], P[1]], color="#984ea3", lw=1.8, label="星下方向")
+    ax.plot([S[0], G[0]], [S[1], G[1]], color="#e41a1c", lw=1.8, label="天线锥边界")
 
     cap_arc = np.linspace(math.pi / 2.0 - theta, math.pi / 2.0, 120)
     ax.plot(
@@ -481,7 +533,7 @@ def plot_single_satellite_geometry(theta: float, alpha_rad: float, output_dir: P
         color="#ff7f00",
         lw=4.0,
         solid_capstyle="round",
-        label="Ground coverage arc",
+        label="地面覆盖弧",
     )
 
     theta_arc = np.linspace(math.pi / 2.0 - theta, math.pi / 2.0, 80)
@@ -530,9 +582,9 @@ def plot_single_satellite_geometry(theta: float, alpha_rad: float, output_dir: P
     ax.set_aspect("equal", adjustable="box")
     ax.set_xlim(-0.7 * R, 0.95 * R)
     ax.set_ylim(-0.12 * R, 1.18 * rs)
-    ax.set_xlabel("Cross-section x (km)")
-    ax.set_ylabel("Cross-section y (km)")
-    ax.set_title("Single-satellite spherical coverage geometry")
+    ax.set_xlabel("剖面 x / km")
+    ax.set_ylabel("剖面 y / km")
+    ax.set_title("单颗卫星球面覆盖几何示意")
     ax.legend(loc="lower right")
     fig.tight_layout()
     fig.savefig(output_dir / "fig_single_satellite_geometry.png", dpi=300)
@@ -560,16 +612,16 @@ def plot_ground_track_example(output_dir: Path) -> None:
         linewidths=0.0,
     )
     ax.axhspan(TARGET_LAT_MIN_DEG, TARGET_LAT_MAX_DEG, color="#fdbf6f", alpha=0.20)
-    ax.axhline(TARGET_LAT_MIN_DEG, color="#e31a1c", lw=1.2, ls="--", label="30 deg N")
-    ax.axhline(TARGET_LAT_MAX_DEG, color="#e31a1c", lw=1.2, ls="-.", label="50 deg N")
+    ax.axhline(TARGET_LAT_MIN_DEG, color="#e31a1c", lw=1.2, ls="--", label="30°N")
+    ax.axhline(TARGET_LAT_MAX_DEG, color="#e31a1c", lw=1.2, ls="-.", label="50°N")
     ax.set_xlim(-180.0, 180.0)
     ax.set_ylim(-60.0, 60.0)
-    ax.set_xlabel("Longitude (deg)")
-    ax.set_ylabel("Latitude (deg)")
-    ax.set_title("Ground-track example with Earth rotation, i = 50 deg")
+    ax.set_xlabel("经度 / °")
+    ax.set_ylabel("纬度 / °")
+    ax.set_title("考虑地球自转的星下点轨迹示例（i = 50°）")
     ax.legend(loc="lower left")
     cbar = fig.colorbar(sc, ax=ax, pad=0.015)
-    cbar.set_label("Elapsed orbits")
+    cbar.set_label("经过的轨道周期数")
     fig.tight_layout()
     fig.savefig(output_dir / "fig_ground_track_example.png", dpi=300)
     plt.close(fig)
@@ -608,12 +660,12 @@ def plot_latitude_coverage_time_example(
 
     fig, ax = plt.subplots(figsize=(9.0, 4.8))
     ax.plot(time_min, coverage, color="#1f78b4", lw=1.6)
-    ax.axhline(1.0, color="#e31a1c", lw=1.3, ls="--", label="Continuous threshold")
+    ax.axhline(1.0, color="#e31a1c", lw=1.3, ls="--", label="连续覆盖阈值")
     ax.set_ylim(0.0, 1.06)
-    ax.set_xlabel("Time in one orbit (min)")
-    ax.set_ylabel("Latitude coverage ratio")
+    ax.set_xlabel("轨道周期内时间 / min")
+    ax.set_ylabel("纬度覆盖率")
     ax.set_title(
-        f"Latitude-projection coverage over one orbit, i = {inclination:.2f} deg, N = {N}"
+        f"一个轨道周期内的纬度投影覆盖率（i = {inclination:.2f}°，N = {N}）"
     )
     ax.legend(loc="lower right")
     fig.tight_layout()
@@ -634,7 +686,7 @@ def plot_min_satellites_vs_inclination(
             min(infeasible_limit, INCLINATION_MAX_DEG),
             color="#fb9a99",
             alpha=0.22,
-            label=r"Necessary upper-reach condition fails",
+            label="最高覆盖纬度不足的几何不可行区",
         )
 
     finite = min_df.dropna(subset=["N_min"])
@@ -645,11 +697,11 @@ def plot_min_satellites_vs_inclination(
         marker="o",
         markersize=3.2,
         lw=1.3,
-        label="Numerical N_min",
+        label="数值搜索得到的 N_min",
     )
-    ax.set_xlabel("Orbital inclination i (deg)")
-    ax.set_ylabel("Minimum satellites in one orbital plane")
-    ax.set_title("Minimum N for 30 deg N to 50 deg N latitude-projection continuous coverage")
+    ax.set_xlabel("轨道倾角 i / °")
+    ax.set_ylabel("单轨道面最小卫星数")
+    ax.set_title("30°N—50°N 纬度投影连续覆盖所需最小卫星数")
     ax.set_xlim(INCLINATION_MIN_DEG, INCLINATION_MAX_DEG)
     if not finite.empty:
         ax.set_ylim(max(0.0, finite["N_min"].min() - 2.0), finite["N_min"].max() + 3.0)
@@ -659,55 +711,309 @@ def plot_min_satellites_vs_inclination(
     plt.close(fig)
 
 
-def plot_spacing_overlap_curves(
+def _nearest_available_inclination(grid_df: pd.DataFrame, target_i: float) -> float:
+    available = np.asarray(sorted(grid_df["inclination_deg"].unique()))
+    return float(available[np.argmin(np.abs(available - target_i))])
+
+
+def plot_spacing_full_coverage_ratio(
     min_df: pd.DataFrame,
     grid_df: pd.DataFrame,
     output_dir: Path,
 ) -> None:
+    """Plot phase spacing against the full-coverage time ratio."""
     representative_inclinations = [46.0, 50.0, 55.0, 60.0]
     colors = ["#1f78b4", "#33a02c", "#ff7f00", "#6a3d9a"]
 
-    fig, (ax_cov, ax_ov) = plt.subplots(2, 1, figsize=(9.2, 7.2), sharex=True)
-
+    fig, ax = plt.subplots(figsize=(9.0, 5.0))
     for target_i, color in zip(representative_inclinations, colors):
-        available = np.asarray(sorted(grid_df["inclination_deg"].unique()))
-        nearest_i = float(available[np.argmin(np.abs(available - target_i))])
+        nearest_i = _nearest_available_inclination(grid_df, target_i)
         sub = grid_df.loc[np.isclose(grid_df["inclination_deg"], nearest_i)].sort_values(
             "spacing_deg"
         )
-        label = f"i = {nearest_i:.0f} deg"
-        ax_cov.plot(
+        ax.plot(
             sub["spacing_deg"],
             sub["full_coverage_time_ratio"],
             color=color,
-            lw=1.5,
-            label=label,
-        )
-        ax_ov.plot(
-            sub["spacing_deg"],
-            sub["mean_overlap_ratio"],
-            color=color,
-            lw=1.5,
-            label=label,
+            lw=1.6,
+            label=f"i = {nearest_i:.0f}°",
         )
 
         min_row = min_df.loc[np.isclose(min_df["inclination_deg"], nearest_i)]
         if not min_row.empty and not pd.isna(min_row.iloc[0]["spacing_deg_at_N_min"]):
             threshold_spacing = float(min_row.iloc[0]["spacing_deg_at_N_min"])
-            ax_cov.axvline(threshold_spacing, color=color, ls="--", alpha=0.32)
-            ax_ov.axvline(threshold_spacing, color=color, ls="--", alpha=0.32)
+            ax.axvline(threshold_spacing, color=color, ls="--", alpha=0.35)
 
-    ax_cov.axhline(1.0, color="#e31a1c", ls="--", lw=1.1)
-    ax_cov.set_ylabel("Full coverage time ratio")
-    ax_cov.set_title("Spacing, full-coverage time ratio, and redundant overlap")
-    ax_cov.legend(loc="lower left", ncol=2)
-
-    ax_ov.set_xlabel("Orbital phase spacing 360/N (deg)")
-    ax_ov.set_ylabel("Mean overlap ratio")
-    ax_ov.legend(loc="upper right", ncol=2)
-    ax_ov.invert_xaxis()
+    ax.axhline(1.0, color="#e31a1c", ls="--", lw=1.2, label="连续覆盖阈值")
+    ax.set_xlabel("卫星相位间距 360°/N（越小表示卫星越多）")
+    ax.set_ylabel("完全覆盖时间比例")
+    ax.set_title("卫星相位间距对完全覆盖时间比例的影响")
+    ax.set_ylim(-0.04, 1.06)
+    ax.invert_xaxis()
+    ax.legend(loc="lower left", ncol=2)
     fig.tight_layout()
-    fig.savefig(output_dir / "fig_spacing_overlap_curves.png", dpi=300)
+    fig.savefig(output_dir / "fig_spacing_full_coverage_ratio.png", dpi=300)
+    plt.close(fig)
+
+
+def plot_spacing_redundancy_index(
+    min_df: pd.DataFrame,
+    grid_df: pd.DataFrame,
+    output_dir: Path,
+) -> None:
+    """Plot phase spacing against the average redundancy index."""
+    representative_inclinations = [46.0, 50.0, 55.0, 60.0]
+    colors = ["#1f78b4", "#33a02c", "#ff7f00", "#6a3d9a"]
+
+    fig, ax = plt.subplots(figsize=(9.0, 5.0))
+    for target_i, color in zip(representative_inclinations, colors):
+        nearest_i = _nearest_available_inclination(grid_df, target_i)
+        sub = grid_df.loc[np.isclose(grid_df["inclination_deg"], nearest_i)].sort_values(
+            "spacing_deg"
+        )
+        ax.plot(
+            sub["spacing_deg"],
+            sub["mean_overlap_ratio"],
+            color=color,
+            lw=1.6,
+            label=f"i = {nearest_i:.0f}°",
+        )
+
+        min_row = min_df.loc[np.isclose(min_df["inclination_deg"], nearest_i)]
+        if not min_row.empty and not pd.isna(min_row.iloc[0]["spacing_deg_at_N_min"]):
+            threshold_spacing = float(min_row.iloc[0]["spacing_deg_at_N_min"])
+            ax.axvline(threshold_spacing, color=color, ls="--", alpha=0.35)
+
+    ax.set_xlabel("卫星相位间距 360°/N（越小表示卫星越多）")
+    ax.set_ylabel("平均冗余覆盖指数")
+    ax.set_title("卫星相位间距对平均冗余覆盖指数的影响")
+    ax.invert_xaxis()
+    ax.legend(loc="upper right", ncol=2)
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig_spacing_redundancy_index.png", dpi=300)
+    plt.close(fig)
+
+
+def plot_fixed_N_coverage_curves(grid_df: pd.DataFrame, output_dir: Path) -> None:
+    """Plot inclination sensitivity for fixed satellite counts."""
+    fixed_counts = [20, 23, 25, 30, 32, 40]
+    colors = plt.cm.tab10(np.linspace(0.0, 1.0, len(fixed_counts)))
+
+    fig, ax = plt.subplots(figsize=(9.0, 5.0))
+    for N, color in zip(fixed_counts, colors):
+        sub = grid_df.loc[grid_df["N"] == N].sort_values("inclination_deg")
+        ax.plot(sub["inclination_deg"], sub["min_coverage"], lw=1.6, color=color, label=f"N = {N}")
+    ax.axhline(1.0, color="#e31a1c", lw=1.2, ls="--", label="连续覆盖阈值")
+    ax.set_xlabel("轨道倾角 i / °")
+    ax.set_ylabel("最小纬度覆盖率")
+    ax.set_title("固定卫星数下轨道倾角对最小覆盖率的影响")
+    ax.set_ylim(0.0, 1.05)
+    ax.legend(loc="lower right", ncol=2)
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig_fixed_N_min_coverage_vs_inclination.png", dpi=300)
+    plt.close(fig)
+
+    fig, ax = plt.subplots(figsize=(9.0, 5.0))
+    for N, color in zip(fixed_counts, colors):
+        sub = grid_df.loc[grid_df["N"] == N].sort_values("inclination_deg")
+        ax.plot(sub["inclination_deg"], sub["mean_coverage"], lw=1.6, color=color, label=f"N = {N}")
+    ax.set_xlabel("轨道倾角 i / °")
+    ax.set_ylabel("平均纬度覆盖率")
+    ax.set_title("固定卫星数下轨道倾角对平均覆盖率的影响")
+    ax.set_ylim(0.0, 1.05)
+    ax.legend(loc="lower right", ncol=2)
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig_fixed_N_mean_coverage_vs_inclination.png", dpi=300)
+    plt.close(fig)
+
+
+def plot_coverage_heatmap(grid_df: pd.DataFrame, output_dir: Path) -> None:
+    """Plot a heatmap of min coverage over inclination and satellite count."""
+    pivot = grid_df.pivot(index="N", columns="inclination_deg", values="min_coverage").sort_index()
+    inclinations = pivot.columns.to_numpy(dtype=float)
+    satellite_counts = pivot.index.to_numpy(dtype=float)
+    values = pivot.to_numpy(dtype=float)
+
+    fig, ax = plt.subplots(figsize=(9.4, 6.2))
+    mesh = ax.pcolormesh(
+        inclinations,
+        satellite_counts,
+        values,
+        shading="auto",
+        cmap="viridis",
+        vmin=0.0,
+        vmax=1.0,
+    )
+    continuous_mask = (values >= 1.0 - COVERAGE_TOL).astype(float)
+    ax.contour(
+        inclinations,
+        satellite_counts,
+        continuous_mask,
+        levels=[0.5],
+        colors="#e31a1c",
+        linewidths=1.4,
+    )
+    boundary_handle = Line2D([0], [0], color="#e31a1c", lw=1.4, label="min_coverage = 1 边界")
+
+    ax.set_xlabel("轨道倾角 i / °")
+    ax.set_ylabel("单轨卫星数 N")
+    ax.set_title("倾角—卫星数二维覆盖性能热力图")
+    cbar = fig.colorbar(mesh, ax=ax, pad=0.015)
+    cbar.set_label("最小纬度覆盖率")
+    ax.legend(handles=[boundary_handle], loc="upper left")
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig_coverage_heatmap_i_N.png", dpi=300)
+    plt.close(fig)
+
+
+def plot_upper_reach_vs_inclination(min_df: pd.DataFrame, output_dir: Path) -> None:
+    """Plot the geometric upper reach i + theta."""
+    fig, ax = plt.subplots(figsize=(9.0, 5.0))
+    ax.plot(
+        min_df["inclination_deg"],
+        min_df["upper_reach_deg"],
+        color="#1f78b4",
+        lw=1.8,
+        label="最高可覆盖纬度 i + θ",
+    )
+    ax.axhline(
+        TARGET_LAT_MAX_DEG,
+        color="#e31a1c",
+        ls="--",
+        lw=1.3,
+        label="目标纬度带上边界 50°N",
+    )
+    infeasible = min_df["upper_reach_deg"] < TARGET_LAT_MAX_DEG
+    if infeasible.any():
+        ax.fill_between(
+            min_df["inclination_deg"],
+            min_df["upper_reach_deg"],
+            TARGET_LAT_MAX_DEG,
+            where=infeasible,
+            color="#fb9a99",
+            alpha=0.25,
+            label="i + θ < 50° 的几何不可行区",
+        )
+    ax.set_xlabel("轨道倾角 i / °")
+    ax.set_ylabel("最高可覆盖纬度 i + θ / °")
+    ax.set_title("低倾角不可行性的几何解释")
+    ax.legend(loc="lower right")
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig_upper_reach_vs_inclination.png", dpi=300)
+    plt.close(fig)
+
+
+def plot_coverage_time_representative_cases(
+    theta: float,
+    target_band: tuple[float, float],
+    output_dir: Path,
+) -> None:
+    """Plot C_lat(t) for representative feasible cases."""
+    cases = [(46.0, 23), (50.0, 25), (55.0, 30), (60.0, 32)]
+    colors = ["#1f78b4", "#33a02c", "#ff7f00", "#6a3d9a"]
+
+    fig, ax = plt.subplots(figsize=(9.2, 5.2))
+    for (inclination, N), color in zip(cases, colors):
+        metrics = evaluate_latitude_coverage(
+            i_deg=inclination,
+            N=N,
+            theta=theta,
+            target_band=target_band,
+            num_time_samples=NUM_TIME_SAMPLES,
+            return_series=True,
+        )
+        ax.plot(
+            np.asarray(metrics["time_seconds"]) / 60.0,
+            np.asarray(metrics["coverage_series"]),
+            color=color,
+            lw=1.35,
+            label=f"i = {inclination:.0f}°，N = {N}",
+        )
+
+    ax.axhline(1.0, color="#e31a1c", lw=1.2, ls="--", label="连续覆盖阈值")
+    ax.set_xlabel("轨道周期内时间 / min")
+    ax.set_ylabel("纬度覆盖率")
+    ax.set_title("代表性可行方案的纬度覆盖率时间变化")
+    ax.set_ylim(0.0, 1.06)
+    ax.legend(loc="lower right", ncol=2)
+    fig.tight_layout()
+    fig.savefig(output_dir / "fig_coverage_time_representative_cases.png", dpi=300)
+    plt.close(fig)
+
+
+def _coverage_snapshot(
+    inclination_deg: float,
+    N: int,
+    theta: float,
+    target_band: tuple[float, float],
+) -> tuple[int, np.ndarray, np.ndarray]:
+    metrics = evaluate_latitude_coverage(
+        i_deg=inclination_deg,
+        N=N,
+        theta=theta,
+        target_band=target_band,
+        num_time_samples=NUM_TIME_SAMPLES,
+        return_series=True,
+    )
+    coverage = np.asarray(metrics["coverage_series"])
+    worst_idx = int(np.argmin(coverage))
+    latitudes_deg = np.degrees(np.asarray(metrics["latitudes_rad"])[worst_idx, :])
+    intervals_deg = np.column_stack(
+        [latitudes_deg - math.degrees(theta), latitudes_deg + math.degrees(theta)]
+    )
+    return worst_idx, latitudes_deg, intervals_deg
+
+
+def plot_interval_snapshot_feasible_vs_infeasible(
+    theta: float,
+    target_band: tuple[float, float],
+    output_dir: Path,
+) -> None:
+    """Compare worst-time latitude intervals for feasible and infeasible cases."""
+    cases = [
+        (46.0, 23, "可行方案：i = 46°，N = 23"),
+        (40.0, 80, "几何不可行：i = 40°，N = 80"),
+    ]
+
+    fig, axes = plt.subplots(1, 2, figsize=(12.0, 5.8), sharey=True)
+    for ax, (inclination, N, title) in zip(axes, cases):
+        _, latitudes_deg, intervals_deg = _coverage_snapshot(
+            inclination, N, theta, target_band
+        )
+        x = np.arange(1, N + 1)
+        ax.axhspan(TARGET_LAT_MIN_DEG, TARGET_LAT_MAX_DEG, color="#fdbf6f", alpha=0.20)
+        ax.axhline(TARGET_LAT_MIN_DEG, color="#e31a1c", ls="--", lw=1.0, label="30°N")
+        ax.axhline(TARGET_LAT_MAX_DEG, color="#e31a1c", ls="-.", lw=1.0, label="50°N")
+        ax.vlines(
+            x,
+            intervals_deg[:, 0],
+            intervals_deg[:, 1],
+            color="#1f78b4",
+            alpha=0.72,
+            lw=1.0 if N > 40 else 1.6,
+        )
+        ax.scatter(x, latitudes_deg, s=9 if N > 40 else 18, color="#222222", zorder=4)
+        upper_reach = inclination + math.degrees(theta)
+        ax.axhline(upper_reach, color="#6a3d9a", ls=":", lw=1.2, label=f"i+θ={upper_reach:.2f}°")
+        if inclination == 40.0:
+            ax.annotate(
+                "最高覆盖纬度低于 50°N",
+                xy=(N * 0.62, upper_reach),
+                xytext=(N * 0.36, TARGET_LAT_MAX_DEG + 2.0),
+                arrowprops={"arrowstyle": "->", "color": "#6a3d9a", "lw": 1.2},
+                color="#6a3d9a",
+                fontsize=10,
+            )
+        ax.set_title(title)
+        ax.set_xlabel("卫星序号")
+        ax.set_xlim(0.0, N + 1.0)
+        ax.set_ylim(20.0, 56.0)
+        ax.legend(loc="lower right", fontsize=9)
+
+    axes[0].set_ylabel("纬度 / °")
+    fig.suptitle("最差覆盖时刻的卫星纬度覆盖区间对比", y=0.98)
+    fig.tight_layout(rect=[0.0, 0.0, 1.0, 0.94])
+    fig.savefig(output_dir / "fig_interval_snapshot_feasible_vs_infeasible.png", dpi=300)
     plt.close(fig)
 
 
@@ -735,10 +1041,11 @@ def _representative_table_markdown(min_df: pd.DataFrame) -> str:
         row = sub.iloc[0]
         n_text = "不可行" if pd.isna(row["N_min"]) else str(int(row["N_min"]))
         spacing_text = "-" if pd.isna(row["spacing_deg_at_N_min"]) else f"{row['spacing_deg_at_N_min']:.3f}"
-        overlap_text = "-" if pd.isna(row["mean_overlap_at_N_min"]) else f"{row['mean_overlap_at_N_min']:.4f}"
+        redundancy_text = "-" if pd.isna(row["mean_overlap_at_N_min"]) else f"{row['mean_overlap_at_N_min']:.4f}"
+        normalized_text = "-" if pd.isna(row["normalized_overlap_at_N_min"]) else f"{row['normalized_overlap_at_N_min']:.4f}"
         gap_text = "-" if pd.isna(row["max_gap_time_min_at_N_min"]) else f"{row['max_gap_time_min_at_N_min']:.4f}"
         rows.append(
-            f"| {row['inclination_deg']:.2f} | {n_text} | {spacing_text} | {overlap_text} | {gap_text} |"
+            f"| {row['inclination_deg']:.2f} | {n_text} | {spacing_text} | {redundancy_text} | {normalized_text} | {gap_text} |"
         )
     return "\n".join(rows)
 
@@ -772,6 +1079,11 @@ def generate_method_notes(
     period_min = orbital_period_seconds() / 60.0
     theta_deg = summary["theta_given_deg"]
     theta_alpha_deg = summary["theta_alpha_deg"]
+    row_40 = min_df.loc[np.isclose(min_df["inclination_deg"], 40.0)].iloc[0]
+    upper_reach_40 = float(row_40["upper_reach_deg"])
+    row_40_80 = grid_df.loc[
+        np.isclose(grid_df["inclination_deg"], 40.0) & (grid_df["N"] == 80)
+    ].iloc[0]
 
     notes = f"""# 问题一：单轨道面覆盖特性分析方法说明
 
@@ -779,7 +1091,7 @@ def generate_method_notes(
 
 ## 问题一建模思路总览
 
-问题一的作用是为后续多轨道面星座优化建立基础模型。建模内容可以分成四层：第一层是单颗卫星的地面覆盖几何，用覆盖地心角描述球面覆盖范围；第二层是同一圆轨道面内 N 颗卫星均匀分布时的星下点经纬度轨迹；第三层是在目标纬度带上构造一维区间并集，定义纬度投影覆盖率和重叠率；第四层是在给定倾角范围内枚举卫星数，搜索满足连续覆盖判据的最小 N。
+问题一的作用是为后续多轨道面星座优化建立基础模型。建模内容可以分成四层：第一层是单颗卫星的地面覆盖几何，用覆盖地心角描述球面覆盖范围；第二层是同一圆轨道面内 N 颗卫星均匀分布时的星下点经纬度轨迹；第三层是在目标纬度带上构造一维区间并集，定义纬度投影覆盖率和冗余覆盖指标；第四层是在给定倾角范围内枚举卫星数，搜索满足连续覆盖判据的最小 N。
 
 本模型严格限定在问题一。经度模型用于说明星下点轨迹和地球自转影响，但最终连续覆盖判据只作用在纬度投影方向，不等价于对目标区域每一个经纬度网格点的持续覆盖。
 
@@ -863,13 +1175,19 @@ C_lat(t) = L_union(t) / L_B.
 L_sum(t) = sum length(I_k(t) intersect B),
 ```
 
-以及重复覆盖长度
+以及冗余覆盖长度
 
 ```text
 L_overlap(t) = max(0, L_sum(t)-L_union(t)).
 ```
 
-瞬时重叠率为 eta_overlap(t)=L_overlap(t)/L_B。输出指标包括最小覆盖率、平均覆盖率、全覆盖时间比例、平均重叠率，以及周期意义下最长未全覆盖空档时间。
+当前代码保留历史字段名 `mean_overlap_ratio`，但论文表述中称为“平均冗余覆盖指数”或“平均冗余覆盖倍数”。它的定义是 L_overlap(t)/L_B 的时间均值，数值可以大于 1，表示冗余覆盖长度相对于目标带宽的倍数。若需要 0 到 1 之间的比例指标，程序新增
+
+```text
+normalized_overlap_ratio = L_overlap(t) / L_sum(t),  L_sum(t)>0,
+```
+
+当 L_sum(t)=0 时该比例记为 0。输出指标包括最小覆盖率、平均覆盖率、全覆盖时间比例、平均冗余覆盖指数、归一化冗余比例，以及周期意义下最长未全覆盖空档时间。
 
 ## 最小卫星数搜索方法
 
@@ -889,7 +1207,9 @@ i + theta >= 50 deg.
 
 若 i+theta<50 deg，即使同一轨道面内卫星数量无限增多，星下点最高纬度加覆盖地心角仍无法达到目标纬度带上边界 50 deg，因此该倾角在几何上不可行。当前采用 theta_given 时，因上边界条件失败而不可行的倾角范围为：{infeasible_upper_text}。但这个条件只是必要条件，最终是否连续覆盖仍以时间采样区间并集结果为准。在几何上通过上界判断但 N<=80 仍未找到连续覆盖方案的倾角范围为：{no_n_found_text}。
 
-## 卫星间距与覆盖重叠率
+程序确实扫描了 40 deg 到 60 deg 的完整倾角范围。40 deg 没有 N_min 不是因为程序漏算，而是因为当前模型要求整个 30 deg N 到 50 deg N 纬度带在纬度投影方向连续覆盖。对 40 deg 轨道，最高可覆盖纬度为 i+theta={upper_reach_40:.6f} deg N，达不到 50 deg N 上边界；即使取 N=80，完整扫描得到的 min_coverage 仍为 {float(row_40_80['min_coverage']):.6f}。若采用“纬度带内任意一点可见”的弱判据，40 deg 的结论会不同；本文采用的是更强的纬度带全覆盖判据，目的是为后续区域覆盖优化提供保守基础。
+
+## 卫星间距与平均冗余覆盖指数
 
 同一轨道面内卫星均匀分布，轨道相位间距定义为
 
@@ -897,7 +1217,7 @@ i + theta >= 50 deg.
 spacing = 360 deg / N.
 ```
 
-spacing 越小表示同轨卫星越密。随着 N 增加，目标纬度带内被覆盖的机会增加，连续覆盖阈值更容易达到；同时多个卫星对同一纬度段的重复覆盖也增加。程序用 L_sum-L_union 定义冗余覆盖长度，并用其相对目标带宽的均值作为 mean_overlap_ratio。
+spacing 越小表示同轨卫星越密。随着 N 增加，目标纬度带内被覆盖的机会增加，连续覆盖阈值更容易达到；同时多个卫星对同一纬度段的重复覆盖也增加。程序用 L_sum-L_union 定义冗余覆盖长度，并用其相对目标带宽的均值作为平均冗余覆盖指数。这个指数是倍数指标，不限制在 0 到 1；新增的 normalized_overlap_ratio 则给出冗余覆盖长度占总覆盖长度的比例。
 
 刚好达到连续覆盖的 N_min 对应最小可行方案。继续增加 N 通常会提高冗余覆盖和鲁棒性，但也会增加单轨道面卫星规模，因此论文中应把 N_min 作为规模下限，把更大 N 解释为冗余设计选择。
 
@@ -909,8 +1229,8 @@ spacing 越小表示同轨卫星越密。随着 N 增加，目标纬度带内被
 
 代表性倾角的结果如下，数值均来自 `inclination_min_satellites.csv`：
 
-| inclination_deg | N_min | spacing_deg_at_N_min | mean_overlap_at_N_min | max_gap_time_min_at_N_min |
-|---:|---:|---:|---:|---:|
+| inclination_deg | N_min | spacing_deg_at_N_min | 平均冗余覆盖指数 | 归一化冗余比例 | max_gap_time_min_at_N_min |
+|---:|---:|---:|---:|---:|---:|
 {rep_table}
 
 若某些倾角显示不可行，应先检查 `feasible_by_upper_bound`。若该列为 False，原因是最高可覆盖纬度不足以达到 50 deg N。若该列为 True 但 N_min 为空，则表示虽然几何上最高纬度可达上边界，但在本程序 N<=80 的枚举范围内，一个轨道周期内仍存在纬度覆盖空档，最终判据没有通过。
@@ -921,7 +1241,14 @@ spacing 越小表示同轨卫星越密。随着 N 增加，目标纬度带内被
 - `fig_ground_track_example.png` 展示 i=50 deg 的经纬度二维星下点轨迹，并标出 30 deg N 到 50 deg N 目标带，说明星下点轨迹不只有纬度。
 - `fig_latitude_coverage_time_example.png` 展示代表性可行方案在一个轨道周期内的 C_lat(t)，y=1 参考线即连续覆盖判据。
 - `fig_min_satellites_vs_inclination.png` 展示不同倾角下所需的最小单轨道面卫星数。
-- `fig_spacing_overlap_curves.png` 展示代表性倾角下相位间距、全覆盖时间比例和平均重叠率之间的关系。
+- `fig_fixed_N_min_coverage_vs_inclination.png` 展示固定 N 下倾角对最小覆盖率的影响。
+- `fig_fixed_N_mean_coverage_vs_inclination.png` 展示固定 N 下倾角对平均覆盖率的影响。
+- `fig_coverage_heatmap_i_N.png` 展示倾角和卫星数二维参数空间中的最小覆盖率，并标出连续覆盖边界。
+- `fig_upper_reach_vs_inclination.png` 从 i+theta 的角度解释低倾角不可行性。
+- `fig_spacing_full_coverage_ratio.png` 展示相位间距与完全覆盖时间比例的关系。
+- `fig_spacing_redundancy_index.png` 展示相位间距与平均冗余覆盖指数的关系。
+- `fig_coverage_time_representative_cases.png` 比较四个代表性可行方案的 C_lat(t)。
+- `fig_interval_snapshot_feasible_vs_infeasible.png` 对比可行方案与 40 deg 低倾角方案在最差覆盖时刻的纬度区间。
 
 再次强调，本模型解决的是问题一中的单轨道面纬度投影覆盖分析，不等价于目标区域的完整二维连续覆盖。完整二维覆盖需要在问题二中引入经纬度网格、多个轨道面和升交点布局。
 """
@@ -943,6 +1270,9 @@ def write_method_notes(
 def write_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict[str, float]]:
     """Run all computations and save tables, figures, and method notes."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    stale_spacing_plot = OUTPUT_DIR / "fig_spacing_overlap_curves.png"
+    if stale_spacing_plot.exists():
+        stale_spacing_plot.unlink()
     _set_plot_style()
 
     single_df, summary = build_single_satellite_summary()
@@ -960,7 +1290,13 @@ def write_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict[str,
     plot_ground_track_example(OUTPUT_DIR)
     plot_latitude_coverage_time_example(min_df, theta, target_band, OUTPUT_DIR)
     plot_min_satellites_vs_inclination(min_df, summary["theta_given_deg"], OUTPUT_DIR)
-    plot_spacing_overlap_curves(min_df, grid_df, OUTPUT_DIR)
+    plot_fixed_N_coverage_curves(grid_df, OUTPUT_DIR)
+    plot_coverage_heatmap(grid_df, OUTPUT_DIR)
+    plot_upper_reach_vs_inclination(min_df, OUTPUT_DIR)
+    plot_spacing_full_coverage_ratio(min_df, grid_df, OUTPUT_DIR)
+    plot_spacing_redundancy_index(min_df, grid_df, OUTPUT_DIR)
+    plot_coverage_time_representative_cases(theta, target_band, OUTPUT_DIR)
+    plot_interval_snapshot_feasible_vs_infeasible(theta, target_band, OUTPUT_DIR)
     write_method_notes(summary, min_df, grid_df, OUTPUT_DIR)
 
     return single_df, min_df, grid_df, summary
@@ -988,7 +1324,7 @@ def print_summary(min_df: pd.DataFrame, summary: dict[str, float]) -> None:
                 f"i = {row['inclination_deg']:.2f} deg: "
                 f"N_min = {int(row['N_min'])}, "
                 f"spacing = {row['spacing_deg_at_N_min']:.3f} deg, "
-                f"mean_overlap = {row['mean_overlap_at_N_min']:.4f}"
+                f"mean_redundancy_index = {row['mean_overlap_at_N_min']:.4f}"
             )
 
     if finite.empty:

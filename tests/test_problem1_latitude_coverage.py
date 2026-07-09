@@ -64,3 +64,36 @@ def test_evaluate_latitude_coverage_reports_full_cover_when_one_interval_contain
     assert math.isclose(metrics["full_coverage_time_ratio"], 1.0)
     assert math.isclose(metrics["max_gap_time_min"], 0.0)
 
+
+def test_evaluate_latitude_coverage_reports_normalized_overlap_ratio():
+    metrics = p1.evaluate_latitude_coverage(
+        i_deg=0.0,
+        N=2,
+        theta=1.0,
+        target_band=(math.radians(-2.0), math.radians(2.0)),
+        num_time_samples=64,
+        return_series=False,
+    )
+
+    assert math.isclose(metrics["mean_overlap_ratio"], 1.0)
+    assert math.isclose(metrics["normalized_overlap_ratio"], 0.5)
+
+
+def test_evaluate_latitude_coverage_handles_zero_sum_for_normalized_overlap():
+    metrics = p1.evaluate_latitude_coverage(
+        i_deg=0.0,
+        N=1,
+        theta=math.radians(1.0),
+        target_band=(math.radians(70.0), math.radians(71.0)),
+        num_time_samples=64,
+        return_series=False,
+    )
+
+    assert math.isclose(metrics["normalized_overlap_ratio"], 0.0)
+
+
+def test_configure_chinese_font_is_nonfatal_and_keeps_minus_sign_setting():
+    selected_font = p1.configure_chinese_font()
+
+    assert selected_font is None or isinstance(selected_font, str)
+    assert p1.plt.rcParams["axes.unicode_minus"] is False
