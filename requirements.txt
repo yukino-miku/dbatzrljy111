@@ -1,14 +1,5 @@
 numpy
 pandas
-scipy
 matplotlib
-seaborn
-scikit-learn
-networkx
-skyfield
-sgp4
-tqdm
-openpyxl
-jupyterlab
 pytest
 

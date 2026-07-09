@@ -1,0 +1,2 @@
+alpha_deg,theta_alpha_deg,theta_given_deg,ground_radius_from_alpha_km,ground_radius_given_km,spherical_cap_area_km2,flat_area_km2,area_relative_error,spherical_cap_area_from_alpha_km2
+40.46,4.364468726652541,4.550567325948776,485.30677990259994,506.0,803938.0855852868,804360.8166545165,0.0005258254047286502,739558.5786666987

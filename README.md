@@ -1,6 +1,6 @@
 # 星链系统低轨卫星星座建模
 
-本项目用于数学建模比赛模拟练习，主题为低轨卫星星座建模与分析。
+本仓库用于数学建模比赛模拟练习，主题为低轨卫星星座建模与分析。
 
 ## 目录结构
 
@@ -10,7 +10,7 @@
 - `docs/problem/`: 题面、附件和赛题原始资料。
 - `docs/references/`: 文献、标准、背景资料和链接摘录。
 - `docs/notes/`: 建模过程记录、假设讨论、会议记录。
-- `docs/report/`: 论文正文、公式推导和最终报告草稿。
+- `docs/report/`: 论文正文、方法说明和最终报告草稿。
 - `src/starlink_modeling/`: 可复用建模、仿真、优化和可视化代码。
 - `notebooks/`: 探索性分析和临时实验。
 - `scripts/`: 可重复执行的数据处理、实验和绘图脚本。
@@ -18,6 +18,43 @@
 - `outputs/`: 图片、表格、日志和计算结果。
 - `submissions/`: 最终提交材料。
 - `tests/`: 关键函数和模型计算的测试。
+
+## 问题一：单轨道面覆盖特性分析
+
+当前实现位于根目录脚本：
+
+```powershell
+python problem1_latitude_coverage.py
+```
+
+如果 Windows 上的 `python` 指向 Microsoft Store 占位程序，可改用：
+
+```powershell
+py problem1_latitude_coverage.py
+```
+
+安装依赖：
+
+```powershell
+py -m pip install -r requirements.txt
+```
+
+运行后会自动生成：
+
+- `outputs/problem1/single_satellite_coverage_summary.csv`
+- `outputs/problem1/inclination_min_satellites.csv`
+- `outputs/problem1/coverage_metrics_grid.csv`
+- `outputs/problem1/fig_single_satellite_geometry.png`
+- `outputs/problem1/fig_ground_track_example.png`
+- `outputs/problem1/fig_latitude_coverage_time_example.png`
+- `outputs/problem1/fig_min_satellites_vs_inclination.png`
+- `outputs/problem1/fig_spacing_overlap_curves.png`
+- `problem1_method_notes.md`
+- `docs/report/problem1_method_notes.md`
+
+`problem1_method_notes.md` 是给论文撰写者使用的方法说明，覆盖“问题分析、模型建立、模型求解、结果分析”的主要内容，并会根据程序实际输出自动插入关键数值。
+
+注意：本模型解决的是问题一中的单轨道面纬度投影覆盖分析，不等价于目标区域的完整二维连续覆盖。完整二维覆盖需要在问题二中引入经纬度网格、多个轨道面和升交点布局。
 
 ## 工作约定
 
@@ -31,6 +68,4 @@ git add <changed-files>
 git commit -m "说明本次更改"
 git push
 ```
-
-4. 若 GitHub 远端尚未配置，先创建远端仓库并设置 `origin`。
 
