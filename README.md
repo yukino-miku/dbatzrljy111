@@ -47,7 +47,14 @@ py -m pip install -r requirements.txt
 - `outputs/problem1/fig_ground_track_example.png`
 - `outputs/problem1/fig_latitude_coverage_time_example.png`
 - `outputs/problem1/fig_min_satellites_vs_inclination.png`
-- `outputs/problem1/fig_spacing_overlap_curves.png`
+- `outputs/problem1/fig_fixed_N_min_coverage_vs_inclination.png`
+- `outputs/problem1/fig_fixed_N_mean_coverage_vs_inclination.png`
+- `outputs/problem1/fig_coverage_heatmap_i_N.png`
+- `outputs/problem1/fig_upper_reach_vs_inclination.png`
+- `outputs/problem1/fig_spacing_full_coverage_ratio.png`
+- `outputs/problem1/fig_spacing_redundancy_index.png`
+- `outputs/problem1/fig_coverage_time_representative_cases.png`
+- `outputs/problem1/fig_interval_snapshot_feasible_vs_infeasible.png`
 - `problem1_method_notes.md`
 - `docs/report/problem1_method_notes.md`
 
@@ -67,4 +74,3 @@ git add <changed-files>
 git commit -m "说明本次更改"
 git push
 ```
-
