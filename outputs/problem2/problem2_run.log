@@ -1,0 +1,42 @@
+2026-07-10 17:32:25,590 | INFO | 开始问题二：mode=quick, scenario=single, seed=20260710, workers=4
+2026-07-10 17:32:25,591 | INFO | 主搜索网格：equal_arc，点数=731，时间步长=300 s，仿真=1.0 d
+2026-07-10 17:32:25,592 | INFO | 运行 single 场景遗传算法
+2026-07-10 17:34:23,419 | INFO | single 当前最佳：M=30 N=50 S=1500 i=52.139 Q1=0.253472 Q2=0.000000 status=search_infeasible
+2026-07-10 18:14:03,561 | INFO | 开始问题二：mode=quick, scenario=both, seed=20260710, workers=4
+2026-07-10 18:14:03,561 | INFO | 主搜索网格：equal_arc，点数=731，时间步长=300 s，仿真=1.0 d
+2026-07-10 18:14:03,561 | INFO | 运行 single 场景遗传算法
+2026-07-10 18:15:35,098 | INFO | 固定 M,N 核验 single：M=31, N=48, S=1488
+2026-07-10 18:15:41,074 | INFO | 固定 M,N 核验 single：M=48, N=31, S=1488
+2026-07-10 18:15:47,286 | INFO | 固定 M,N 核验 single：M=33, N=45, S=1485
+2026-07-10 18:15:53,946 | INFO | 固定 M,N 核验 single：M=45, N=33, S=1485
+2026-07-10 18:16:00,421 | INFO | 固定 M,N 核验 single：M=55, N=27, S=1485
+2026-07-10 18:16:06,881 | INFO | 固定 M,N 核验 single：M=53, N=28, S=1484
+2026-07-10 18:16:15,876 | INFO | single 当前最佳：M=34 N=44 S=1496 i=51.804 Q1=1.000000 Q2=0.000000 status=quick_smoke_only
+2026-07-10 18:16:15,876 | INFO | 运行 double 场景遗传算法
+2026-07-10 18:18:04,177 | INFO | 固定 M,N 核验 double：M=42, N=44, S=1848
+2026-07-10 18:18:12,050 | INFO | 固定 M,N 核验 double：M=44, N=42, S=1848
+2026-07-10 18:18:19,991 | INFO | 固定 M,N 核验 double：M=56, N=33, S=1848
+2026-07-10 18:18:27,226 | INFO | 固定 M,N 核验 double：M=41, N=45, S=1845
+2026-07-10 18:18:35,328 | INFO | 固定 M,N 核验 double：M=45, N=41, S=1845
+2026-07-10 18:18:42,044 | INFO | 固定 M,N 核验 double：M=40, N=46, S=1840
+2026-07-10 18:18:53,458 | INFO | double 当前最佳：M=40 N=46 S=1840 i=50.331 Q1=1.000000 Q2=1.000000 status=quick_smoke_only
+2026-07-10 18:18:53,577 | INFO | 敏感性 single 1/10：grid_step_deg=2.0
+2026-07-10 18:18:53,858 | INFO | 敏感性 single 2/10：grid_step_deg=1.0
+2026-07-10 18:18:54,331 | INFO | 敏感性 single 3/10：grid_step_deg=0.5
+2026-07-10 18:18:55,543 | INFO | 敏感性 single 4/10：time_step_seconds=300.0
+2026-07-10 18:18:55,793 | INFO | 敏感性 single 5/10：time_step_seconds=120.0
+2026-07-10 18:18:56,406 | INFO | 敏感性 single 6/10：time_step_seconds=60.0
+2026-07-10 18:18:57,708 | INFO | 敏感性 single 7/10：time_step_seconds=30.0
+2026-07-10 18:19:00,203 | INFO | 敏感性 single 8/10：simulation_days=1.0
+2026-07-10 18:19:00,469 | INFO | 敏感性 single 9/10：simulation_days=3.0
+2026-07-10 18:19:01,244 | INFO | 敏感性 single 10/10：simulation_days=7.0
+2026-07-10 18:19:02,982 | INFO | 敏感性 double 1/10：grid_step_deg=2.0
+2026-07-10 18:19:03,285 | INFO | 敏感性 double 2/10：grid_step_deg=1.0
+2026-07-10 18:19:03,817 | INFO | 敏感性 double 3/10：grid_step_deg=0.5
+2026-07-10 18:19:05,287 | INFO | 敏感性 double 4/10：time_step_seconds=300.0
+2026-07-10 18:19:05,609 | INFO | 敏感性 double 5/10：time_step_seconds=120.0
+2026-07-10 18:19:06,407 | INFO | 敏感性 double 6/10：time_step_seconds=60.0
+2026-07-10 18:19:07,908 | INFO | 敏感性 double 7/10：time_step_seconds=30.0
+2026-07-10 18:19:11,014 | INFO | 敏感性 double 8/10：simulation_days=1.0
+2026-07-10 18:19:11,344 | INFO | 敏感性 double 9/10：simulation_days=3.0
+2026-07-10 18:19:12,335 | INFO | 敏感性 double 10/10：simulation_days=7.0

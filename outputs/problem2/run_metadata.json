@@ -1,0 +1,117 @@
+{
+  "started_at_utc": "2026-07-10T10:14:03.559645+00:00",
+  "finished_at_utc": "2026-07-10T10:19:21.653259+00:00",
+  "elapsed_seconds": 318.0936065999995,
+  "completed": true,
+  "mode": "quick",
+  "scenario": "both",
+  "seed": 20260710,
+  "workers": 4,
+  "resume": false,
+  "skip_certification": false,
+  "skip_sensitivity": false,
+  "config_file": "configs\\problem2_quick.json",
+  "config": {
+    "mode": "quick",
+    "description": "代码冒烟测试配置，不用于论文最终结论",
+    "search_bounds": {
+      "M": [
+        2,
+        60
+      ],
+      "N": [
+        4,
+        50
+      ],
+      "inclination_deg": [
+        40.0,
+        60.0
+      ]
+    },
+    "region": {
+      "latitude_bounds_deg": [
+        4.0,
+        53.0
+      ],
+      "longitude_bounds_deg": [
+        73.0,
+        135.0
+      ]
+    },
+    "simulation": {
+      "simulation_days": 1.0,
+      "time_step_seconds": 300.0,
+      "grid_type": "equal_arc",
+      "equal_arc_spacing_km": 220.0,
+      "regular_grid_step_deg": 2.0,
+      "coverage_method": "auto",
+      "tolerance": 1e-12
+    },
+    "ga": {
+      "population_size": 30,
+      "generations": 20,
+      "elite_ratio": 0.1,
+      "tournament_size": 3,
+      "crossover_probability": 0.85,
+      "mutation_probability": 0.2,
+      "inclination_mutation_sigma_deg": 1.5,
+      "stagnation_generations": 6,
+      "stagnation_mutation_multiplier": 2.0,
+      "early_stop_generations": 10,
+      "random_seed_count": 1,
+      "cache_decimals": 5
+    },
+    "heuristic_initialization": {
+      "inclination_deg": [
+        49.0,
+        57.0
+      ],
+      "M": [
+        25,
+        55
+      ],
+      "N": [
+        30,
+        50
+      ],
+      "fully_random_ratio": 0.3
+    },
+    "certification": {
+      "enabled": true,
+      "satellite_margin": 8,
+      "max_pairs": 6,
+      "population_size": 10,
+      "generations": 4,
+      "random_seed_count": 1
+    },
+    "local_refinement": {
+      "enabled": true,
+      "max_iterations": 1,
+      "inclination_step_deg": 0.5,
+      "angle_step_deg": 1.0
+    },
+    "validation": {
+      "short_term": {
+        "simulation_days": 1.0,
+        "time_step_seconds": 300.0,
+        "regular_grid_step_deg": 2.0
+      },
+      "long_term": {
+        "simulation_days": 1.0,
+        "time_step_seconds": 300.0,
+        "equal_arc_spacing_km": 220.0
+      },
+      "max_candidates_to_validate": 2
+    }
+  },
+  "python_version": "3.13.6",
+  "numpy_version": "2.4.4",
+  "pandas_version": "3.0.2",
+  "scipy_version": "1.17.1",
+  "matplotlib_version": "3.10.8",
+  "result_status": {
+    "single": "quick_smoke_only",
+    "double": "quick_smoke_only"
+  },
+  "disclaimer": "数值结果仅在记录的搜索范围、网格、时间采样和随机种子条件下成立；遗传算法结果不构成严格全局最优证明。"
+}

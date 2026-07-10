@@ -1,0 +1,37 @@
+{
+  "mode": "full",
+  "description": "论文最终高精度验证配置，计算耗时很长",
+  "search_bounds": {"M": [2, 60], "N": [4, 50], "inclination_deg": [40.0, 60.0]},
+  "region": {"latitude_bounds_deg": [4.0, 53.0], "longitude_bounds_deg": [73.0, 135.0]},
+  "simulation": {
+    "simulation_days": 1.0,
+    "time_step_seconds": 120.0,
+    "grid_type": "equal_arc",
+    "equal_arc_spacing_km": 110.0,
+    "regular_grid_step_deg": 0.5,
+    "coverage_method": "auto",
+    "tolerance": 1e-12
+  },
+  "ga": {
+    "population_size": 100,
+    "generations": 140,
+    "elite_ratio": 0.08,
+    "tournament_size": 3,
+    "crossover_probability": 0.85,
+    "mutation_probability": 0.20,
+    "inclination_mutation_sigma_deg": 1.25,
+    "stagnation_generations": 25,
+    "stagnation_mutation_multiplier": 2.0,
+    "early_stop_generations": 45,
+    "random_seed_count": 5,
+    "cache_decimals": 6
+  },
+  "heuristic_initialization": {"inclination_deg": [49.0, 57.0], "M": [25, 55], "N": [30, 50], "fully_random_ratio": 0.25},
+  "certification": {"enabled": true, "satellite_margin": 15, "max_pairs": 60, "population_size": 60, "generations": 50, "random_seed_count": 3},
+  "local_refinement": {"enabled": true, "max_iterations": 5, "inclination_step_deg": 0.10, "angle_step_deg": 0.25},
+  "validation": {
+    "short_term": {"simulation_days": 1.0, "time_step_seconds": 30.0, "regular_grid_step_deg": 0.5},
+    "long_term": {"simulation_days": 7.0, "time_step_seconds": 120.0, "equal_arc_spacing_km": 55.0},
+    "max_candidates_to_validate": 6
+  }
+}

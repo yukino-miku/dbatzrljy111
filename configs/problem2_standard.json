@@ -1,0 +1,37 @@
+{
+  "mode": "standard",
+  "description": "主要遗传算法优化配置",
+  "search_bounds": {"M": [2, 60], "N": [4, 50], "inclination_deg": [40.0, 60.0]},
+  "region": {"latitude_bounds_deg": [4.0, 53.0], "longitude_bounds_deg": [73.0, 135.0]},
+  "simulation": {
+    "simulation_days": 1.0,
+    "time_step_seconds": 120.0,
+    "grid_type": "equal_arc",
+    "equal_arc_spacing_km": 110.0,
+    "regular_grid_step_deg": 1.0,
+    "coverage_method": "auto",
+    "tolerance": 1e-12
+  },
+  "ga": {
+    "population_size": 80,
+    "generations": 100,
+    "elite_ratio": 0.08,
+    "tournament_size": 3,
+    "crossover_probability": 0.85,
+    "mutation_probability": 0.20,
+    "inclination_mutation_sigma_deg": 1.5,
+    "stagnation_generations": 20,
+    "stagnation_mutation_multiplier": 2.0,
+    "early_stop_generations": 35,
+    "random_seed_count": 3,
+    "cache_decimals": 5
+  },
+  "heuristic_initialization": {"inclination_deg": [49.0, 57.0], "M": [25, 55], "N": [30, 50], "fully_random_ratio": 0.25},
+  "certification": {"enabled": true, "satellite_margin": 12, "max_pairs": 24, "population_size": 40, "generations": 30, "random_seed_count": 2},
+  "local_refinement": {"enabled": true, "max_iterations": 3, "inclination_step_deg": 0.25, "angle_step_deg": 0.5},
+  "validation": {
+    "short_term": {"simulation_days": 1.0, "time_step_seconds": 60.0, "regular_grid_step_deg": 0.5},
+    "long_term": {"simulation_days": 3.0, "time_step_seconds": 120.0, "equal_arc_spacing_km": 110.0},
+    "max_candidates_to_validate": 4
+  }
+}
