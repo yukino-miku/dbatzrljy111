@@ -9,6 +9,7 @@ import shutil
 from typing import Any
 
 from .problem3_io import SelectedConstellation
+from .problem3_traffic import region_traffic_metrics
 
 
 def write_json(path: str | Path, payload: dict[str, Any]) -> Path:
@@ -48,7 +49,11 @@ def write_method_notes(
     topology = _read_json(output_dir / "topology_summary.json")
     routing = _read_json(output_dir / "routing_summary.json")
     traffic = _read_json(output_dir / "traffic_summary.json")
-    traffic_real = bool(traffic and traffic.get("status") == "real_data_loaded")
+    traffic_real = bool(
+        traffic
+        and traffic.get("status")
+        in {"real_data_loaded", "user_given_region_density"}
+    )
     traffic_demo = bool(traffic and traffic.get("is_synthetic_demo"))
     mode_warning = (
         "> **结果使用限制：** 本文档当前插入的是 Quick 冒烟结果，只用于验证代码，不能作为论文最终数值结论。\n"
@@ -56,10 +61,11 @@ def write_method_notes(
         else ""
     )
     validation_warning = (
-        "> **星座输入限制：** 所选 Problem 2 Standard 候选在主网格上满足单重连续覆盖，"
+        "> **星座输入限制：** 所选 Problem 2 Standard 候选为二重覆盖 40×46 星座，"
         f"但其记录的验证状态为 `{selected.validation_status}`。Problem 3 固定继承该输入，"
         "不把它重新解释为已通过 Full 验证。\n"
     )
+    region = region_traffic_metrics()
 
     topology_result = (
         f"同轨相邻距离解析值为 {_status_text(topology, 'same_plane_distance_analytic_km', 3, ' km')}，"
@@ -83,9 +89,14 @@ def write_method_notes(
     )
     if traffic_real:
         traffic_result = (
-            f"实际数据换算后的区域平均需求为 {_status_text(traffic, 'actual_average_demand_gbps', 4, ' Gbps')}；"
-            f"优化方案平均吞吐量为 {_status_text(traffic, 'optimized_mean_throughput_gbps', 4, ' Gbps')}，"
-            f"阻塞比例为 {_status_text(traffic, 'optimized_blocked_ratio', 4)}，"
+            f"用户给定密度对应区域平均需求 {_status_text(traffic, 'mean_traffic_tbps', 6, ' Tbps')}，"
+            f"理论峰值需求 {_status_text(traffic, 'peak_traffic_tbps', 6, ' Tbps')}。"
+            f"本次离散时段内优化方案平均吞吐量为 "
+            f"{_number(float(traffic.get('optimized_mean_throughput_gbps', math.nan)) / 1000.0, 6, ' Tbps')}，"
+            f"平均服务比例为 {_status_text(traffic, 'mean_service_ratio', 6)}，"
+            f"峰值需求时服务比例为 {_status_text(traffic, 'peak_demand_service_ratio', 6)}，"
+            f"平均阻塞量为 {_number(float(traffic.get('mean_blocked_gbps', math.nan)) / 1000.0, 6, ' Tbps')}，"
+            f"峰值需求时阻塞量为 {_number(float(traffic.get('peak_demand_blocked_gbps', math.nan)) / 1000.0, 6, ' Tbps')}，"
             f"最大卫星利用率为 {_status_text(traffic, 'maximum_satellite_utilization', 4)}。"
         )
     elif traffic_demo:
@@ -116,7 +127,7 @@ def write_method_notes(
 
 ## 2. Problem 2 Standard 星座输入
 
-程序实际读取 `{selected.source_file}`，SHA-256 为 `{selected.source_sha256}`。星座参数为：轨道面数 $M={selected.M}$，每面卫星数 $N={selected.N}$，总卫星数 {selected.total_satellites}；倾角 $i={selected.inclination_deg:.8f}^\circ$，相位因子 $F={selected.phase_factor_F}$，初始升交点 $\Omega_0={selected.Omega0_deg:.8f}^\circ$，初始纬度辐角 $u_0={selected.u0_deg:.8f}^\circ$，高度 $h={selected.altitude_km:.1f}$ km，覆盖地心角 $\theta={selected.theta_deg:.8f}^\circ$。轨道面升交点按 $\Omega_p=\Omega_0+360^\circ p/M$ 均匀布置，面内初相位与相邻面相位差继续使用 Problem 2 的 Walker 规则。
+程序实际读取 `{selected.source_file}`，SHA-256 为 `{selected.source_sha256}`，星座签名为 `{selected.constellation_signature}`。该文件是 Problem 2 Standard 二重覆盖结果。星座参数为：轨道面数 $M={selected.M}$，每面卫星数 $N={selected.N}$，总卫星数 {selected.total_satellites}；倾角 $i={selected.inclination_deg:.8f}^\circ$，相位因子 $F={selected.phase_factor_F}$，初始升交点 $\Omega_0={selected.Omega0_deg:.8f}^\circ$，初始纬度辐角 $u_0={selected.u0_deg:.8f}^\circ$，高度 $h={selected.altitude_km:.1f}$ km，覆盖地心角 $\theta={selected.theta_deg:.8f}^\circ$。轨道面升交点按 $\Omega_p=\Omega_0+360^\circ p/M$ 均匀布置，面内初相位与相邻面相位差继续使用 Problem 2 的 Walker 规则。
 
 问题三固定继承这些参数，因为题意研究的是给定星座的链路和路由。若再次调整 $M,N,i,F,\Omega_0,u_0$，就会把问题三错误地变成新的星座设计问题。
 
@@ -158,11 +169,15 @@ $$\tau_{{prop}}=\frac{{l_{{up}}+L_{{ISL}}+l_{{down}}}}{{c}},\qquad
 
 ## 8. 为什么保留 20 Gbps、暂不限制 ISL 容量
 
-20 Gbps 是题目明确给出的单星接入容量。若连这一约束也忽略，吞吐量恒等于需求，第三小问将失去拥塞控制含义。题目没有给出每条激光 ISL 的容量，因此主模型不编造链路带宽，只让 ISL 影响路径是否存在和端到端时延。该简化不能判断某条 ISL 是否发生带宽拥塞；获得链路容量后可扩展为带容量的多商品流模型。
+20 Gbps 是题目明确给出的单星接入容量。{selected.total_satellites} 颗卫星对应绝对理论接入容量上界 {selected.total_satellites * 20 / 1000:.1f} Tbps，只相当于平均需求的 {selected.total_satellites * 20 / region['mean_traffic_gbps']:.2%} 和峰值需求的 {selected.total_satellites * 20 / (region['peak_traffic_tbps'] * 1000):.2%}；实际可服务比例还会受当时覆盖目标区域的卫星数量限制。若连 20 Gbps 约束也忽略，吞吐量恒等于需求，第三小问将失去拥塞控制含义。题目没有给出每条激光 ISL 的容量，因此主模型不编造链路带宽，只让 ISL 影响路径是否存在和端到端时延。该简化不能判断某条 ISL 是否发生带宽拥塞；获得链路容量后可扩展为带容量的多商品流模型。
 
 ## 9. 实际区域流量数据处理
 
-数据接口支持平均 Gbps/Tbps、统计周期累计 GB/TB/PB/EB 和带时间戳的速率曲线。累计量按“字节数乘 8，再除以周期秒数和 $10^9$”换算为平均 Gbps。当前数据来源名称：{source_names}；来源链接：{source_urls}。配置中的卫星承载比例为 $\eta_{{sat}}={config['traffic']['eta_sat']}$；若取 1，只表示全部区域流量进入卫星系统的压力上界，不代表现实市场占有率。平均流量采用均值为 1、峰均比 1.5 的平滑周期曲线，空间权重按球面面积归一化，而不是给每个经纬度采样点相同流量。
+目标区域严格取 $4^\circ\mathrm{{N}}\sim53^\circ\mathrm{{N}}$、$73^\circ\mathrm{{E}}\sim135^\circ\mathrm{{E}}$ 的完整球面经纬度矩形，不使用中国行政国土面积。球面面积为
+
+$$A_{{region}}=R^2\Delta\lambda\left(\sin\varphi_{{max}}-\sin\varphi_{{min}}\right)={region['region_area_km2']:.4f}\ \mathrm{{km}}^2.$$
+
+用户给定统一流量密度 $7.02139\ \mathrm{{Mbit/(s\cdot km^2)}}$，它等价于 $7.02139\ \mathrm{{Mbps/km^2}}$，已经是速率，不能再除以秒、小时或统计周期。因此 $D_{{mean}}={region['mean_traffic_tbps']:.6f}$ Tbps，$D_{{peak}}=1.5D_{{mean}}={region['peak_traffic_tbps']:.6f}$ Tbps，日变化最低值为 {region['minimum_traffic_tbps']:.6f} Tbps。每个规则网格按照 $w_g\propto\cos\varphi_g$ 表示的球面面积权重分配，$A_g=w_gA_{{region}}$，并在程序中检查 $\sum_gA_g=A_{{region}}$、$\sum_gd_g=D(t)$。当前数据来源名称：{source_names}；来源链接：{source_urls}。主结果使用 $\eta_{{sat}}=1$，不自动缩放为 0.1%、1%、5% 或 10%。
 
 ## 10. 公平流量分配模型
 
@@ -195,7 +210,7 @@ $$\sum_{{s\in V_g(t)}}x_{{gs}}(t)=r(t)d_g(t),\quad
 
 ## 15. 模型优点与局限
 
-模型直接继承 Problem 2 的实际输出，采用可复现的时变图、可解释的最短路和公平接入 LP，并保留真实流量数据接口。局限包括圆轨道二体传播、离散时间快照、区域网格化、采样最大时延、暂不限制 ISL 容量，以及未考虑误码、天气和激光捕获时间。实际统计流量的业务口径也可能不等于卫星业务量，$\eta_{{sat}}$ 只能作为情景参数。
+模型直接继承 Problem 2 的 Standard 二重覆盖输出，采用可复现的时变图、可解释的最短路和公平接入 LP，并按球面面积使用用户给定流量密度。局限包括圆轨道二体传播、离散时间快照、区域网格化、采样最大时延、暂不限制 ISL 容量，以及未考虑误码、天气和激光捕获时间。流量密度统一作用于完整矩形区域，是题设情景而非行政区统计口径。
 
 ## 16. 可直接用于论文的文字模板
 
@@ -209,7 +224,7 @@ $$\sum_{{s\in V_g(t)}}x_{{gs}}(t)=r(t)d_g(t),\quad
 
 **流量优化结果段。** {traffic_result}
 
-**结论段。** 上述结论仅在记录的星座输入、离散快照、网格分辨率、点对样本和容量假设下成立。Quick 与演示流量只用于程序验收；论文最终结论必须使用 Standard 或 Full 路由结果及可核验的真实流量数据。
+**结论段。** 上述结论仅在记录的二重覆盖星座输入、离散快照、网格分辨率、点对样本和容量假设下成立。流量密度来自用户给定值；Quick 结果仍只用于程序验收，论文最终数值结论必须等待 Standard 或 Full 运行完成。
 """
     root_path = project_root / "problem3_method_notes.md"
     report_path = project_root / "docs" / "report" / "problem3_method_notes.md"

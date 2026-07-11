@@ -1,10 +1,32 @@
 {
   "mode": "quick",
   "description": "问题三代码冒烟测试配置，不用于论文最终结论",
+  "constellation": {
+    "constellation_scenario": "double",
+    "M": 40,
+    "N": 46,
+    "total_satellites": 1840,
+    "constellation_signature": "standard_double_M40_N46_S1840"
+  },
+  "region": {
+    "region_lat_min_deg": 4.0,
+    "region_lat_max_deg": 53.0,
+    "region_lon_min_deg": 73.0,
+    "region_lon_max_deg": 135.0,
+    "traffic_density_mbps_per_km2": 7.02139,
+    "region_area_km2": 32013984.230224464,
+    "mean_traffic_mbps": 224782668.73425576,
+    "mean_traffic_gbps": 224782.66873425577,
+    "mean_traffic_tbps": 224.78266873425576,
+    "peak_to_mean_ratio": 1.5,
+    "peak_traffic_tbps": 337.1740031013836
+  },
   "constants": {
     "D_ISL_MAX_KM": 5000.0,
     "TAU_PROCESSING_MS": 0.5,
     "C_ACCESS_GBPS": 20.0,
+    "access_capacity_gbps_per_satellite": 20.0,
+    "isl_capacity_constraint": false,
     "LIGHT_SPEED_KM_S": 299792.458
   },
   "topology": {
@@ -21,11 +43,11 @@
     "heatmap_max_destinations": 450
   },
   "traffic": {
-    "duration_hours": 2.0,
-    "time_step_seconds": 900.0,
+    "duration_hours": 24.0,
+    "time_step_seconds": 10800.0,
     "eta_sat": 1.0,
-    "eta_sat_label": "upper_bound_full_traffic_scenario",
-    "eta_sat_sensitivity": [0.001, 0.01, 0.05, 0.1, 1.0],
+    "eta_sat_label": "full_target_region_density_scenario",
+    "eta_sat_sensitivity": [1.0],
     "traffic_profile_mode": "problem_spec",
     "demo_mean_traffic_gbps": 12000.0,
     "assignment_sample_max_rows": 3000

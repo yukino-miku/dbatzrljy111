@@ -34,6 +34,7 @@ from starlink_modeling.problem2_orbit import (  # noqa: E402
     orbital_period_seconds,
 )
 from starlink_modeling.problem3_io import (  # noqa: E402
+    CONSTELLATION_SIGNATURE,
     ConstellationSelectionError,
     SelectedConstellation,
     discover_problem2_constellation,
@@ -57,13 +58,18 @@ from starlink_modeling.problem3_topology import (  # noqa: E402
 )
 from starlink_modeling.problem3_traffic import (  # noqa: E402
     C_ACCESS_GBPS,
+    PEAK_TO_MEAN_RATIO,
+    TRAFFIC_DENSITY_MBPS_PER_KM2,
     AccessAllocation,
     assignment_probabilities,
     build_traffic_timeseries,
     fair_access_allocation,
+    grid_cell_areas_km2,
+    load_region_traffic_density,
     load_traffic_data,
     make_synthetic_demo_traffic,
     nearest_visible_baseline,
+    region_traffic_metrics,
     spatial_ground_demand,
     summarize_traffic_timeseries,
 )
@@ -71,6 +77,7 @@ from starlink_modeling.problem3_visualization import (  # noqa: E402
     plot_routing_figures,
     plot_topology_figures,
     plot_traffic_figures,
+    set_problem3_figure_context,
 )
 
 
@@ -97,7 +104,9 @@ def configure_logging(output_dir: Path) -> logging.Logger:
     logger.setLevel(logging.INFO)
     logger.handlers.clear()
     formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
-    file_handler = logging.FileHandler(output_dir / "problem3_run.log", encoding="utf-8")
+    file_handler = logging.FileHandler(
+        output_dir / "problem3_run.log", mode="w", encoding="utf-8"
+    )
     file_handler.setFormatter(formatter)
     stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setFormatter(formatter)
@@ -107,7 +116,7 @@ def configure_logging(output_dir: Path) -> logging.Logger:
 
 
 def validate_config(config: dict[str, Any]) -> None:
-    for section in ("constants", "topology", "routing", "traffic"):
+    for section in ("constellation", "region", "constants", "topology", "routing", "traffic"):
         if section not in config:
             raise ValueError(f"问题三配置缺少 {section} 段。")
     positive = [
@@ -127,6 +136,43 @@ def validate_config(config: dict[str, Any]) -> None:
         "hungarian",
     }:
         raise ValueError("crosslink_matching_method 必须为 cyclic_shift 或 hungarian。")
+    expected_constellation = config["constellation"]
+    if (
+        expected_constellation.get("constellation_scenario") != "double"
+        or int(expected_constellation.get("M", -1)) != 40
+        or int(expected_constellation.get("N", -1)) != 46
+        or int(expected_constellation.get("total_satellites", -1)) != 1840
+        or expected_constellation.get("constellation_signature")
+        != CONSTELLATION_SIGNATURE
+    ):
+        raise ValueError("问题三配置必须锁定 standard_double_M40_N46_S1840。")
+    region = config["region"]
+    expected_region = (4.0, 53.0, 73.0, 135.0, TRAFFIC_DENSITY_MBPS_PER_KM2)
+    actual_region = (
+        float(region["region_lat_min_deg"]),
+        float(region["region_lat_max_deg"]),
+        float(region["region_lon_min_deg"]),
+        float(region["region_lon_max_deg"]),
+        float(region["traffic_density_mbps_per_km2"]),
+    )
+    if not np.allclose(actual_region, expected_region, atol=1e-12, rtol=0.0):
+        raise ValueError(f"问题三目标区域或流量密度配置错误：{actual_region}")
+    computed_region = region_traffic_metrics(actual_region[-1])
+    for key in (
+        "region_area_km2",
+        "mean_traffic_mbps",
+        "mean_traffic_gbps",
+        "mean_traffic_tbps",
+        "peak_traffic_tbps",
+    ):
+        if not math.isclose(
+            float(region[key]), computed_region[key], rel_tol=1e-12, abs_tol=1e-9
+        ):
+            raise ValueError(f"配置中的 {key} 与公式计算结果不一致。")
+    if not math.isclose(
+        float(region["peak_to_mean_ratio"]), PEAK_TO_MEAN_RATIO, abs_tol=1e-12
+    ):
+        raise ValueError("峰均比必须为 1.5。")
 
 
 def constellation_from_selection(selected: SelectedConstellation):
@@ -149,7 +195,64 @@ def print_selected(selected: SelectedConstellation) -> None:
         f"i={selected.inclination_deg:.8f}°, F={selected.phase_factor_F}, "
         f"Omega0={selected.Omega0_deg:.8f}°, u0={selected.u0_deg:.8f}°, "
         f"h={selected.altitude_km:.1f} km, theta={selected.theta_deg:.8f}°, "
+        f"scenario={selected.scenario}, signature={selected.constellation_signature}, "
         f"validation_status={selected.validation_status}"
+    )
+
+
+def invalidate_stale_constellation_outputs(
+    output_dir: Path,
+    selected: SelectedConstellation,
+    logger: logging.Logger,
+) -> bool:
+    """Remove cached outputs when the Problem 2 constellation input changes."""
+
+    selected_path = output_dir / "selected_problem2_constellation.json"
+    if not selected_path.exists():
+        return False
+    try:
+        previous = json.loads(selected_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        previous = {}
+    previous_key = previous.get("constellation_cache_key")
+    previous_signature = previous.get("constellation_signature")
+    unchanged = (
+        previous_key == selected.constellation_cache_key
+        and previous_signature == selected.constellation_signature
+    )
+    if unchanged:
+        return False
+    logger.warning(
+        "检测到星座缓存键变化（%s -> %s），清除旧 topology/routing/traffic 输出。",
+        previous_signature or "legacy_or_unknown",
+        selected.constellation_signature,
+    )
+    for path in output_dir.iterdir():
+        if path.is_file() and path.name != "problem3_run.log":
+            path.unlink()
+    return True
+
+
+def resume_outputs_match(
+    output_dir: Path,
+    selected: SelectedConstellation,
+    config: dict[str, Any],
+    args: argparse.Namespace,
+) -> bool:
+    metadata_path = output_dir / "problem3_run_metadata.json"
+    if not metadata_path.exists():
+        return False
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return False
+    return bool(
+        metadata.get("completed")
+        and metadata.get("constellation_cache_key")
+        == selected.constellation_cache_key
+        and metadata.get("mode") == args.mode
+        and metadata.get("pair_mode") == args.pair_mode
+        and metadata.get("config") == config
     )
 
 
@@ -541,14 +644,35 @@ def run_traffic_stage(
         )
         logger.warning("流量阶段使用 synthetic_demo，仅用于代码验收。")
     else:
-        logger.warning("未提供真实 --traffic-file；流量阶段安全跳过，不生成虚构结果。")
-        return _write_empty_traffic_outputs(
-            output_dir, "standard/full 需要用户提供可核验的真实 traffic-file"
+        density_file = (
+            PROJECT_ROOT / "data" / "external" / "problem3_region_traffic_density.csv"
+        )
+        dataset = load_region_traffic_density(density_file)
+        logger.info(
+            "采用用户给定区域流量密度 %.5f Mbps/km^2，目标区域面积 %.4f km^2。",
+            dataset.metadata["traffic_density_mbps_per_km2"],
+            dataset.metadata["region_area_km2"],
         )
 
     traffic_config = config["traffic"]
     routing_config = config["routing"]
     grid = make_regular_grid(float(routing_config["ground_grid_step_deg"]))
+    region_metrics = region_traffic_metrics(
+        float(config["region"]["traffic_density_mbps_per_km2"])
+    )
+    cell_areas_km2 = grid_cell_areas_km2(
+        grid.weights, region_metrics["region_area_km2"]
+    )
+    grid_mean_demands_gbps = (
+        cell_areas_km2 * TRAFFIC_DENSITY_MBPS_PER_KM2 / 1000.0
+    )
+    if not math.isclose(
+        float(grid_mean_demands_gbps.sum()),
+        region_metrics["mean_traffic_gbps"],
+        rel_tol=1e-12,
+        abs_tol=1e-6,
+    ):
+        raise RuntimeError("网格平均需求之和与目标区域平均总流量不一致。")
     times = np.arange(
         0.0,
         float(traffic_config["duration_hours"]) * 3600.0,
@@ -587,6 +711,13 @@ def run_traffic_stage(
         demands = spatial_ground_demand(
             float(row["satellite_demand_gbps"]), grid.weights
         )
+        if not math.isclose(
+            float(demands.sum()),
+            float(row["satellite_demand_gbps"]),
+            rel_tol=1e-12,
+            abs_tol=1e-6,
+        ):
+            raise RuntimeError("网格瞬时需求之和与区域瞬时总需求不一致。")
         costs = _expected_assignment_cost_ms(
             snapshot, visibility, slant, grid.weights, seed + time_index
         )
@@ -611,9 +742,21 @@ def run_traffic_stage(
             ]
         optimized_dominant.append(_dominant_assignments(optimized, grid.size))
         baseline_dominant.append(_dominant_assignments(baseline, grid.size))
+        visible_satellite_count = int(np.count_nonzero(np.any(visibility, axis=0)))
+        active_access_satellite_count = int(
+            np.count_nonzero(optimized.satellite_loads_gbps > 1e-10)
+        )
+        visible_access_capacity_gbps = (
+            C_ACCESS_GBPS * active_access_satellite_count
+        )
         traffic_rows.append(
             {
                 **row.to_dict(),
+                "visible_satellite_count": visible_satellite_count,
+                "active_access_satellite_count": active_access_satellite_count,
+                "visible_access_capacity_gbps": visible_access_capacity_gbps,
+                "demand_capacity_ratio": float(row["satellite_demand_gbps"])
+                / max(visible_access_capacity_gbps, 1e-12),
                 "optimized_service_ratio": optimized.service_ratio,
                 "optimized_throughput_gbps": optimized.throughput_gbps,
                 "optimized_blocked_gbps": optimized.blocked_gbps,
@@ -651,6 +794,8 @@ def run_traffic_stage(
                 "ground_index": ground,
                 "latitude_deg": float(grid.latitude_deg[ground]),
                 "longitude_deg": float(grid.longitude_deg[ground]),
+                "grid_area_km2": cell_areas_km2[ground],
+                "mean_demand_gbps": grid_mean_demands_gbps[ground],
                 "demand_gbps": demands[ground],
                 "optimized_served_gbps": optimized.ground_served_gbps[ground],
                 "baseline_served_gbps": baseline.ground_served_gbps[ground],
@@ -736,6 +881,8 @@ def run_traffic_stage(
         ]
     )
     summary = summarize_traffic_timeseries(traffic_frame, dataset)
+    peak_index = int(traffic_frame["satellite_demand_gbps"].idxmax())
+    minimum_index = int(traffic_frame["satellite_demand_gbps"].idxmin())
     summary.update(
         {
             "mode": config["mode"],
@@ -746,6 +893,41 @@ def run_traffic_stage(
             "baseline_mean_delay_ms": float(traffic_frame["baseline_mean_delay_ms"].mean()),
             "optimized_handover_count": optimized_switches,
             "baseline_handover_count": baseline_switches,
+            "constellation_signature": selected.constellation_signature,
+            "constellation_scenario": selected.scenario,
+            "M": selected.M,
+            "N": selected.N,
+            "total_satellites": selected.total_satellites,
+            "theoretical_total_access_capacity_gbps": selected.total_satellites
+            * C_ACCESS_GBPS,
+            "theoretical_mean_service_ratio_upper_bound": selected.total_satellites
+            * C_ACCESS_GBPS
+            / region_metrics["mean_traffic_gbps"],
+            "theoretical_peak_service_ratio_upper_bound": selected.total_satellites
+            * C_ACCESS_GBPS
+            / (region_metrics["peak_traffic_tbps"] * 1000.0),
+            "mean_service_ratio": float(
+                traffic_frame["optimized_service_ratio"].mean()
+            ),
+            "peak_demand_service_ratio": float(
+                traffic_frame.loc[peak_index, "optimized_service_ratio"]
+            ),
+            "minimum_demand_service_ratio": float(
+                traffic_frame.loc[minimum_index, "optimized_service_ratio"]
+            ),
+            "mean_blocked_gbps": float(
+                traffic_frame["optimized_blocked_gbps"].mean()
+            ),
+            "peak_demand_blocked_gbps": float(
+                traffic_frame.loc[peak_index, "optimized_blocked_gbps"]
+            ),
+            "mean_visible_satellite_count": float(
+                traffic_frame["visible_satellite_count"].mean()
+            ),
+            "mean_active_access_satellite_count": float(
+                traffic_frame["active_access_satellite_count"].mean()
+            ),
+            "isl_capacity_constraint": False,
         }
     )
     dataset.audit.to_csv(output_dir / "traffic_data_audit.csv", index=False)
@@ -779,6 +961,7 @@ def write_run_metadata(
     completed: bool,
     stage_status: dict[str, str],
 ) -> None:
+    traffic_metrics = region_traffic_metrics()
     metadata = {
         "started_at_utc": started.isoformat(),
         "finished_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -793,6 +976,19 @@ def write_run_metadata(
         "allow_demo_traffic": args.allow_demo_traffic,
         "traffic_file": args.traffic_file,
         "selected_constellation": selected.to_dict() if selected else None,
+        "constellation_scenario": selected.scenario if selected else None,
+        "M": selected.M if selected else None,
+        "N": selected.N if selected else None,
+        "total_satellites": selected.total_satellites if selected else None,
+        "constellation_signature": (
+            selected.constellation_signature if selected else None
+        ),
+        "constellation_cache_key": (
+            selected.constellation_cache_key if selected else None
+        ),
+        **traffic_metrics,
+        "access_capacity_gbps_per_satellite": C_ACCESS_GBPS,
+        "isl_capacity_constraint": False,
         "stage_status": stage_status,
         "config": config,
         "python_version": platform.python_version(),
@@ -800,7 +996,7 @@ def write_run_metadata(
         "pandas_version": pd.__version__,
         "scipy_version": scipy.__version__,
         "matplotlib_version": matplotlib.__version__,
-        "disclaimer": "Quick 与 synthetic_demo 仅用于代码验收；最终论文结论必须使用 Standard/Full 与真实流量数据。",
+        "disclaimer": "Quick 仅用于代码验收；最终论文数值结论必须使用 Standard/Full。默认流量密度来自用户给定值。",
     }
     write_json(output_dir / "problem3_run_metadata.json", metadata)
 
@@ -822,8 +1018,13 @@ def main() -> None:
             PROJECT_ROOT, args.constellation_file
         )
         print_selected(selected)
+        invalidate_stale_constellation_outputs(OUTPUT_DIR, selected, logger)
+        resume_cache_valid = resume_outputs_match(
+            OUTPUT_DIR, selected, config, args
+        )
         write_selected_constellation(selected, OUTPUT_DIR)
         constellation = constellation_from_selection(selected)
+        set_problem3_figure_context(selected)
         write_satellite_mapping(constellation, OUTPUT_DIR)
 
         requested = (
@@ -833,10 +1034,16 @@ def main() -> None:
         )
         for stage in requested:
             summary_file = OUTPUT_DIR / f"{stage}_summary.json"
-            if args.resume and summary_file.exists():
+            if args.resume and summary_file.exists() and resume_cache_valid:
                 logger.info("--resume：检测到 %s，跳过 %s 阶段。", summary_file, stage)
                 stage_status[stage] = "resumed_existing_output"
                 continue
+            if args.resume and summary_file.exists() and not resume_cache_valid:
+                logger.warning(
+                    "--resume：现有 %s 的星座、模式或配置不匹配，将重新计算 %s。",
+                    summary_file,
+                    stage,
+                )
             if stage == "topology":
                 run_topology_stage(
                     constellation, config, OUTPUT_DIR, args.workers, logger
@@ -891,7 +1098,7 @@ def main() -> None:
     print(f"mode={args.mode}, stage={args.stage}, elapsed={elapsed / 60.0:.2f} min")
     print(f"stage_status={stage_status}")
     if args.mode == "quick":
-        print("注意：Quick 和 synthetic_demo 结果仅用于代码验收，不能作为论文最终结论。")
+        print("注意：Quick 结果仅用于代码验收，不能替代 Standard 正式结果。")
     print(f"输出目录：{OUTPUT_DIR}")
 
 

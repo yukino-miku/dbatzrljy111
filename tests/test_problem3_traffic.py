@@ -5,10 +5,56 @@ import numpy as np
 import pandas as pd
 
 from starlink_modeling.problem3_traffic import (
+    TRAFFIC_DENSITY_MBPS_PER_KM2,
     fair_access_allocation,
+    grid_cell_areas_km2,
+    load_region_traffic_density,
     load_traffic_data,
     nearest_visible_baseline,
+    periodic_problem_spec_profile,
+    region_traffic_metrics,
+    spatial_ground_demand,
+    spherical_rectangle_area_km2,
 )
+
+
+def test_target_region_uses_spherical_rectangle_area():
+    area = spherical_rectangle_area_km2()
+    assert math.isclose(area, 32_013_984.230224464, rel_tol=1e-12)
+    assert not math.isclose(area, 9_600_000.0)
+
+
+def test_density_converts_directly_to_mean_and_peak_traffic():
+    metrics = region_traffic_metrics()
+    expected_mbps = TRAFFIC_DENSITY_MBPS_PER_KM2 * metrics["region_area_km2"]
+    assert math.isclose(metrics["mean_traffic_mbps"], expected_mbps, rel_tol=1e-12)
+    assert math.isclose(metrics["mean_traffic_tbps"], 224.78266873425576, rel_tol=1e-12)
+    assert math.isclose(metrics["peak_traffic_tbps"], 337.1740031013836, rel_tol=1e-12)
+
+
+def test_grid_area_and_demand_sums_match_region_totals():
+    metrics = region_traffic_metrics()
+    weights = np.cos(np.radians(np.array([4.0, 20.0, 35.0, 53.0])))
+    areas = grid_cell_areas_km2(weights)
+    demands = spatial_ground_demand(metrics["mean_traffic_gbps"], weights)
+    assert math.isclose(areas.sum(), metrics["region_area_km2"], rel_tol=1e-12)
+    assert math.isclose(demands.sum(), metrics["mean_traffic_gbps"], rel_tol=1e-12)
+    assert np.allclose(
+        demands,
+        areas * TRAFFIC_DENSITY_MBPS_PER_KM2 / 1000.0,
+        rtol=1e-12,
+    )
+
+
+def test_user_density_file_is_not_divided_by_time():
+    root = Path(__file__).resolve().parents[1]
+    dataset = load_region_traffic_density(
+        root / "data" / "external" / "problem3_region_traffic_density.csv"
+    )
+    metrics = region_traffic_metrics()
+    assert dataset.status == "user_given_region_density"
+    assert math.isclose(dataset.average_actual_gbps, metrics["mean_traffic_gbps"])
+    assert periodic_problem_spec_profile(np.array([0.0])).item() == 1.5
 
 
 def test_fair_lp_has_full_service_when_capacity_is_sufficient():

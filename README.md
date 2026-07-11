@@ -111,7 +111,7 @@ python problem2_constellation_ga.py --mode standard --scenario both --resume
 
 ## 问题三：星间链路与通信路由优化
 
-问题三固定读取 `outputs/problem2/` 中的 Problem 2 Standard 单重覆盖星座，不重新搜索轨道面数、卫星数、倾角或相位参数。程序递归发现候选文件；若存在多套同优先级且参数不同的星座，会停止并要求使用 `--constellation-file` 指定，不会静默猜测。
+问题三固定读取 `outputs/problem2/` 中的 Problem 2 Standard 二重覆盖星座 `M=40, N=46, S=1840`，签名为 `standard_double_M40_N46_S1840`，不重新搜索轨道面数、卫星数、倾角或相位参数。默认或手工指定的文件若不是这套二重覆盖星座，程序会直接报错，不会退回单重覆盖方案。星座缓存键包含规模、场景、轨道参数和源文件哈希，输入变化时旧问题三输出自动失效。
 
 安装依赖后运行：
 
@@ -138,7 +138,7 @@ python problem3_network_routing.py --stage traffic
 - `--seed`：固定抽样和基准分配顺序。
 - `--workers`：并行生成不同时间的拓扑快照。
 - `--resume`：已有对应阶段汇总文件时跳过该阶段。
-- `--allow-demo-traffic`：仅允许在 Quick 模式显式启用 `synthetic_demo` 流量。
+- `--allow-demo-traffic`：保留的测试开关，仅允许在 Quick 模式显式启用 `synthetic_demo`；正常运行无需该参数。
 
 三级精度配置位于 `configs/problem3_quick.json`、`configs/problem3_standard.json` 和 `configs/problem3_full.json`：
 
@@ -151,7 +151,7 @@ python problem3_network_routing.py --stage traffic
 - `data/external/problem3_traffic_data_template.csv`
 - `data/external/problem3_traffic_data_README.md`
 
-Standard 或 Full 未提供真实 `--traffic-file` 时，拓扑和路由仍可运行，流量阶段写入 `status=skipped_missing_real_data` 并清除旧演示流量图，不会编造论文结果。`eta_sat=1` 仅表示“全部区域流量由卫星承载”的压力上界情景，不代表现实市场占有率。
+未指定 `--traffic-file` 时，程序默认读取用户给定的 [problem3_region_traffic_density.csv](data/external/problem3_region_traffic_density.csv)：在 `4°N～53°N、73°E～135°E` 完整球面矩形内使用 `7.02139 Mbps/km²`。面积按 $R^2\Delta\lambda(\sin\varphi_{max}-\sin\varphi_{min})$ 计算，约为 `32,013,984.23 km²`；平均需求约为 `224.782669 Tbps`，峰值约为 `337.174003 Tbps`。每个网格按球面面积分配流量，主结果固定 `eta_sat=1`，不自动缩放流量密度。`--traffic-file` 仍可覆盖默认数据源。
 
 主要输出位于 `outputs/problem3/`：
 

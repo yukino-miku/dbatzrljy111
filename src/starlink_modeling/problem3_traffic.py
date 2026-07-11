@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import math
 from pathlib import Path
 from typing import Any
@@ -12,8 +12,16 @@ import pandas as pd
 from scipy.optimize import linprog
 from scipy.sparse import coo_matrix, csr_matrix
 
+from .problem2_orbit import R_EARTH_KM
+
 
 C_ACCESS_GBPS = 20.0
+TRAFFIC_DENSITY_MBPS_PER_KM2 = 7.02139
+REGION_LAT_MIN_DEG = 4.0
+REGION_LAT_MAX_DEG = 53.0
+REGION_LON_MIN_DEG = 73.0
+REGION_LON_MAX_DEG = 135.0
+PEAK_TO_MEAN_RATIO = 1.5
 
 
 @dataclass
@@ -26,6 +34,7 @@ class TrafficDataset:
     source_names: list[str]
     source_urls: list[str]
     is_synthetic_demo: bool = False
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -48,6 +57,97 @@ CUMULATIVE_BYTES = {
     "pb": 1.0e15,
     "eb": 1.0e18,
 }
+
+
+def spherical_rectangle_area_km2(
+    lat_min_deg: float = REGION_LAT_MIN_DEG,
+    lat_max_deg: float = REGION_LAT_MAX_DEG,
+    lon_min_deg: float = REGION_LON_MIN_DEG,
+    lon_max_deg: float = REGION_LON_MAX_DEG,
+    earth_radius_km: float = R_EARTH_KM,
+) -> float:
+    """Exact spherical area of the target latitude-longitude rectangle."""
+
+    if not (-90.0 <= lat_min_deg < lat_max_deg <= 90.0):
+        raise ValueError("纬度边界必须满足 -90 <= min < max <= 90。")
+    if not lon_min_deg < lon_max_deg:
+        raise ValueError("经度上边界必须大于下边界。")
+    delta_lambda = math.radians(lon_max_deg - lon_min_deg)
+    sine_span = math.sin(math.radians(lat_max_deg)) - math.sin(
+        math.radians(lat_min_deg)
+    )
+    return float(earth_radius_km**2 * delta_lambda * sine_span)
+
+
+def region_traffic_metrics(
+    traffic_density_mbps_per_km2: float = TRAFFIC_DENSITY_MBPS_PER_KM2,
+) -> dict[str, float]:
+    area = spherical_rectangle_area_km2()
+    mean_mbps = float(traffic_density_mbps_per_km2) * area
+    return {
+        "region_lat_min_deg": REGION_LAT_MIN_DEG,
+        "region_lat_max_deg": REGION_LAT_MAX_DEG,
+        "region_lon_min_deg": REGION_LON_MIN_DEG,
+        "region_lon_max_deg": REGION_LON_MAX_DEG,
+        "traffic_density_mbps_per_km2": float(traffic_density_mbps_per_km2),
+        "earth_radius_km": R_EARTH_KM,
+        "region_area_km2": area,
+        "mean_traffic_mbps": mean_mbps,
+        "mean_traffic_gbps": mean_mbps / 1.0e3,
+        "mean_traffic_tbps": mean_mbps / 1.0e6,
+        "peak_to_mean_ratio": PEAK_TO_MEAN_RATIO,
+        "peak_traffic_tbps": PEAK_TO_MEAN_RATIO * mean_mbps / 1.0e6,
+        "minimum_traffic_tbps": 0.5 * mean_mbps / 1.0e6,
+    }
+
+
+def load_region_traffic_density(path: str | Path) -> TrafficDataset:
+    """Load the user-supplied uniform density and derive total regional traffic."""
+
+    path = Path(path)
+    frame = pd.read_csv(path)
+    if len(frame) != 1:
+        raise ValueError("区域流量密度文件必须且只能包含一行。")
+    row = frame.iloc[0]
+    density = float(row["traffic_density_value"])
+    normalized_unit = str(row["traffic_density_normalized_unit"]).strip().lower()
+    if normalized_unit not in {"mbps/km²", "mbps/km2"}:
+        raise ValueError("区域流量密度必须归一化为 Mbps/km²。")
+    bounds = (
+        float(row["lat_min_deg"]),
+        float(row["lat_max_deg"]),
+        float(row["lon_min_deg"]),
+        float(row["lon_max_deg"]),
+    )
+    expected_bounds = (
+        REGION_LAT_MIN_DEG,
+        REGION_LAT_MAX_DEG,
+        REGION_LON_MIN_DEG,
+        REGION_LON_MAX_DEG,
+    )
+    if not np.allclose(bounds, expected_bounds, atol=1e-12, rtol=0.0):
+        raise ValueError(f"区域边界必须为 {expected_bounds}，实际为 {bounds}。")
+    if not math.isclose(
+        density, TRAFFIC_DENSITY_MBPS_PER_KM2, abs_tol=1e-12, rel_tol=0.0
+    ):
+        raise ValueError(
+            f"流量密度必须为 {TRAFFIC_DENSITY_MBPS_PER_KM2} Mbps/km²。"
+        )
+    metrics = region_traffic_metrics(density)
+    audit = frame.copy()
+    audit.insert(0, "source_file", str(path.resolve()))
+    for key, value in metrics.items():
+        audit[key] = value
+    return TrafficDataset(
+        status="user_given_region_density",
+        data_type="uniform_area_density",
+        average_actual_gbps=metrics["mean_traffic_gbps"],
+        hourly_profile=None,
+        audit=audit,
+        source_names=_clean_sources(frame, "source_name"),
+        source_urls=_clean_sources(frame, "source_url"),
+        metadata=metrics,
+    )
 
 
 def _clean_sources(frame: pd.DataFrame, column: str) -> list[str]:
@@ -174,7 +274,8 @@ def periodic_problem_spec_profile(times_seconds: np.ndarray) -> np.ndarray:
     """Daily smooth profile with global mean 1 and peak-to-mean ratio 1.5."""
 
     times = np.asarray(times_seconds, dtype=float)
-    peak_seconds = 20.0 * 3600.0
+    # Put the peak at t=0 so a short Quick run still exercises the 1.5 peak.
+    peak_seconds = 0.0
     return 1.0 + 0.5 * np.cos(2.0 * np.pi * (times - peak_seconds) / 86400.0)
 
 
@@ -226,6 +327,24 @@ def spatial_ground_demand(
     if np.any(weights < 0.0) or weights.sum() <= 0.0:
         raise ValueError("Area weights must be nonnegative and have positive sum.")
     return float(total_demand_gbps) * weights / weights.sum()
+
+
+def grid_cell_areas_km2(
+    area_weights: np.ndarray,
+    region_area_km2: float | None = None,
+) -> np.ndarray:
+    weights = np.asarray(area_weights, dtype=float)
+    if np.any(weights < 0.0) or float(weights.sum()) <= 0.0:
+        raise ValueError("Area weights must be nonnegative and have positive sum.")
+    area = (
+        spherical_rectangle_area_km2()
+        if region_area_km2 is None
+        else float(region_area_km2)
+    )
+    cells = area * weights / weights.sum()
+    if not math.isclose(float(cells.sum()), area, rel_tol=1e-12, abs_tol=1e-6):
+        raise RuntimeError("网格面积之和与题目目标区域面积不一致。")
+    return cells
 
 
 def _visible_edges(visibility: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -468,7 +587,7 @@ def assignment_probabilities(
 def summarize_traffic_timeseries(frame: pd.DataFrame, dataset: TrafficDataset) -> dict[str, Any]:
     if frame.empty:
         return {"status": "skipped_missing_real_data"}
-    return {
+    summary = {
         "status": dataset.status,
         "is_synthetic_demo": dataset.is_synthetic_demo,
         "data_type": dataset.data_type,
@@ -497,4 +616,5 @@ def summarize_traffic_timeseries(frame: pd.DataFrame, dataset: TrafficDataset) -
         "isl_capacity_modeled": False,
         "access_capacity_gbps_per_satellite": C_ACCESS_GBPS,
     }
-
+    summary.update(dataset.metadata)
+    return summary

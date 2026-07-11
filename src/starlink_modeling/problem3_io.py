@@ -17,6 +17,11 @@ PREFERRED_VALIDATION_WORDS = (
     "feasible",
     "search_passed",
 )
+EXPECTED_SCENARIO = "double"
+EXPECTED_M = 40
+EXPECTED_N = 46
+EXPECTED_TOTAL_SATELLITES = 1840
+CONSTELLATION_SIGNATURE = "standard_double_M40_N46_S1840"
 
 
 class ConstellationSelectionError(RuntimeError):
@@ -43,7 +48,29 @@ class SelectedConstellation:
     validation_status: str
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        payload["constellation_signature"] = self.constellation_signature
+        payload["constellation_cache_key"] = self.constellation_cache_key
+        return payload
+
+    @property
+    def constellation_signature(self) -> str:
+        return CONSTELLATION_SIGNATURE
+
+    @property
+    def constellation_cache_key(self) -> str:
+        payload = {
+            "M": self.M,
+            "N": self.N,
+            "scenario": self.scenario,
+            "inclination_deg": self.inclination_deg,
+            "phase_factor_F": self.phase_factor_F,
+            "Omega0_deg": self.Omega0_deg,
+            "u0_deg": self.u0_deg,
+            "source_file_hash": self.source_sha256,
+        }
+        serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 def load_json(path: str | Path) -> dict[str, Any]:
@@ -160,18 +187,38 @@ def _validation_preferred(status: str) -> bool:
 def _selection_score(candidate: SelectedConstellation, path: Path) -> tuple[int, ...]:
     return (
         int(candidate.mode == "standard"),
-        int(candidate.scenario == "single"),
+        int(candidate.scenario == "double"),
         int(_validation_preferred(candidate.validation_status)),
         int("standard" in str(path).lower()),
-        int(path.name.lower().startswith("best_single_constellation")),
+        int(path.name.lower().startswith("best_double_constellation")),
     )
+
+
+def validate_expected_double_constellation(
+    selected: SelectedConstellation,
+) -> SelectedConstellation:
+    expected = (
+        selected.mode == "standard"
+        and selected.scenario == EXPECTED_SCENARIO
+        and selected.M == EXPECTED_M
+        and selected.N == EXPECTED_N
+        and selected.total_satellites == EXPECTED_TOTAL_SATELLITES
+    )
+    if not expected:
+        raise ConstellationSelectionError(
+            "问题三必须采用 Problem 2 Standard 二重覆盖星座 "
+            f"{CONSTELLATION_SIGNATURE}；实际读取 mode={selected.mode!r}, "
+            f"scenario={selected.scenario!r}, M={selected.M}, N={selected.N}, "
+            f"S={selected.total_satellites}，不允许退回单重覆盖方案。"
+        )
+    return selected
 
 
 def discover_problem2_constellation(
     project_root: str | Path,
     explicit_file: str | Path | None = None,
 ) -> SelectedConstellation:
-    """Select the unique best problem-two standard single-cover result.
+    """Select the unique Problem 2 Standard 40x46 double-cover result.
 
     Equal-ranked candidates are rejected rather than selected by filesystem order.
     """
@@ -183,12 +230,13 @@ def discover_problem2_constellation(
             path = root / path
         if not path.exists():
             raise FileNotFoundError(f"指定的星座文件不存在：{path}")
-        return _candidate_from_json(path.resolve(), root)
+        return validate_expected_double_constellation(
+            _candidate_from_json(path.resolve(), root)
+        )
 
     output_root = root / "outputs" / "problem2"
     patterns = (
-        "**/best_single_constellation*.json",
-        "**/best_*constellation*.json",
+        "**/best_double_constellation*.json",
     )
     paths: list[Path] = []
     for pattern in patterns:
@@ -205,12 +253,22 @@ def discover_problem2_constellation(
     for path in paths:
         try:
             candidate = _candidate_from_json(path, root)
-            candidates.append((_selection_score(candidate, path), path, candidate))
+            if (
+                candidate.mode == "standard"
+                and candidate.scenario == EXPECTED_SCENARIO
+                and candidate.M == EXPECTED_M
+                and candidate.N == EXPECTED_N
+                and candidate.total_satellites == EXPECTED_TOTAL_SATELLITES
+            ):
+                candidates.append((_selection_score(candidate, path), path, candidate))
         except (OSError, ValueError, json.JSONDecodeError, ConstellationSelectionError) as exc:
             errors.append(f"{path}: {exc}")
     if not candidates:
         detail = "\n".join(errors)
-        raise ConstellationSelectionError(f"找到候选文件但均无法读取：\n{detail}")
+        raise ConstellationSelectionError(
+            "未找到符合 standard/double/M=40/N=46/S=1840 的问题二星座，"
+            f"且不允许退回单重覆盖方案。候选读取信息：\n{detail}"
+        )
 
     best_score = max(item[0] for item in candidates)
     top = [item for item in candidates if item[0] == best_score]
@@ -231,7 +289,9 @@ def discover_problem2_constellation(
             "发现多套同优先级问题二星座，无法安全自动选择。请使用 "
             f"--constellation-file 指定其中一个：\n{listed}"
         )
-    return sorted(top, key=lambda item: str(item[1]))[0][2]
+    return validate_expected_double_constellation(
+        sorted(top, key=lambda item: str(item[1]))[0][2]
+    )
 
 
 def write_selected_constellation(
@@ -243,4 +303,3 @@ def write_selected_constellation(
         json.dumps(selected.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
     )
     return path
-

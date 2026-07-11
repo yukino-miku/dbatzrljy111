@@ -1,0 +1,2 @@
+region_name,lat_min_deg,lat_max_deg,lon_min_deg,lon_max_deg,traffic_density_value,traffic_density_original_unit,traffic_density_normalized_unit,earth_radius_km,region_area_km2,mean_traffic_mbps,mean_traffic_gbps,mean_traffic_tbps,peak_factor,peak_traffic_tbps,source_name,source_url,notes
+题目目标区域,4.0,53.0,73.0,135.0,7.02139,Mbit/(s·km²),Mbps/km²,6371.0,32013984.230224464,224782668.73425576,224782.66873425577,224.78266873425576,1.5,337.1740031013836,用户给定,,该流量密度由用户提供，并统一作用于题目规定的 4°N～53°N、73°E～135°E 完整球面矩形区域。
