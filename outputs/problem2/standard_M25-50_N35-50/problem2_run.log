@@ -1,0 +1,27 @@
+2026-07-11 15:28:01,216 | INFO | 开始 standard 复评：source=C:\Users\25735\Documents\dbatzrljy111-problem2\repo\outputs\problem2\standard_M25-50_N35-50, output=C:\Users\25735\Documents\dbatzrljy111-problem2\repo\outputs\problem2\standard_M25-50_N35-50
+2026-07-11 15:28:01,218 | INFO | 复评网格：equal_arc，点数=2788，时间步长=120 s，仿真=1.0 d
+2026-07-11 15:28:01,218 | INFO | 复评 single 候选：M=34, N=44, S=1496
+2026-07-11 15:28:03,450 | INFO | single 复评结果：Q1=1.000000, Q2=0.000000, feasible=True, status=standard_search_passed_requires_full
+2026-07-11 15:28:03,450 | INFO | 复评 double 候选：M=40, N=46, S=1840
+2026-07-11 15:28:07,660 | INFO | double 复评结果：Q1=1.000000, Q2=0.988889, feasible=True, status=standard_search_passed_requires_full
+2026-07-11 15:28:07,672 | INFO | 敏感性 single 1/10：grid_step_deg=2.0
+2026-07-11 15:28:08,145 | INFO | 敏感性 single 2/10：grid_step_deg=1.0
+2026-07-11 15:28:08,959 | INFO | 敏感性 single 3/10：grid_step_deg=0.5
+2026-07-11 15:28:11,634 | INFO | 敏感性 single 4/10：time_step_seconds=300.0
+2026-07-11 15:28:12,114 | INFO | 敏感性 single 5/10：time_step_seconds=120.0
+2026-07-11 15:28:13,269 | INFO | 敏感性 single 6/10：time_step_seconds=60.0
+2026-07-11 15:28:15,749 | INFO | 敏感性 single 7/10：time_step_seconds=30.0
+2026-07-11 15:28:20,468 | INFO | 敏感性 single 8/10：simulation_days=1.0
+2026-07-11 15:28:20,930 | INFO | 敏感性 single 9/10：simulation_days=3.0
+2026-07-11 15:28:22,342 | INFO | 敏感性 single 10/10：simulation_days=7.0
+2026-07-11 15:28:25,509 | INFO | 敏感性 double 1/10：grid_step_deg=2.0
+2026-07-11 15:28:26,084 | INFO | 敏感性 double 2/10：grid_step_deg=1.0
+2026-07-11 15:28:27,022 | INFO | 敏感性 double 3/10：grid_step_deg=0.5
+2026-07-11 15:28:29,922 | INFO | 敏感性 double 4/10：time_step_seconds=300.0
+2026-07-11 15:28:30,482 | INFO | 敏感性 double 5/10：time_step_seconds=120.0
+2026-07-11 15:28:31,841 | INFO | 敏感性 double 6/10：time_step_seconds=60.0
+2026-07-11 15:28:34,531 | INFO | 敏感性 double 7/10：time_step_seconds=30.0
+2026-07-11 15:28:40,005 | INFO | 敏感性 double 8/10：simulation_days=1.0
+2026-07-11 15:28:40,595 | INFO | 敏感性 double 9/10：simulation_days=3.0
+2026-07-11 15:28:42,341 | INFO | 敏感性 double 10/10：simulation_days=7.0
+2026-07-11 15:28:59,948 | INFO | 复评完成，耗时 0.98 min

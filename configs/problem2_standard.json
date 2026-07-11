@@ -1,7 +1,7 @@
 {
   "mode": "standard",
   "description": "主要遗传算法优化配置",
-  "search_bounds": {"M": [2, 60], "N": [4, 50], "inclination_deg": [40.0, 60.0]},
+  "search_bounds": {"M": [25, 50], "N": [35, 50], "inclination_deg": [40.0, 60.0]},
   "region": {"latitude_bounds_deg": [4.0, 53.0], "longitude_bounds_deg": [73.0, 135.0]},
   "simulation": {
     "simulation_days": 1.0,
@@ -26,7 +26,7 @@
     "random_seed_count": 3,
     "cache_decimals": 5
   },
-  "heuristic_initialization": {"inclination_deg": [49.0, 57.0], "M": [25, 55], "N": [30, 50], "fully_random_ratio": 0.25},
+  "heuristic_initialization": {"inclination_deg": [49.0, 57.0], "M": [25, 50], "N": [35, 50], "fully_random_ratio": 0.25},
   "certification": {"enabled": true, "satellite_margin": 12, "max_pairs": 24, "population_size": 40, "generations": 30, "random_seed_count": 2},
   "local_refinement": {"enabled": true, "max_iterations": 3, "inclination_step_deg": 0.25, "angle_step_deg": 0.5},
   "validation": {

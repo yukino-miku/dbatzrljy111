@@ -87,6 +87,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--seed", type=int, default=20260710)
     parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument(
+        "--output-subdir",
+        type=str,
+        default=None,
+        help="Write this run below outputs/problem2 in a separate subdirectory.",
+    )
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
         "--skip-certification",
@@ -99,6 +105,18 @@ def parse_args() -> argparse.Namespace:
         help="仅用于调试；跳过分辨率敏感性计算",
     )
     return parser.parse_args()
+
+
+def resolve_output_dir(output_subdir: str | None) -> Path:
+    """Resolve a run-specific output directory without leaving outputs/problem2."""
+
+    base_dir = OUTPUT_DIR.resolve()
+    if output_subdir is None:
+        return base_dir
+    candidate = (base_dir / output_subdir).resolve()
+    if candidate != base_dir and base_dir not in candidate.parents:
+        raise ValueError("--output-subdir must stay within outputs/problem2")
+    return candidate
 
 
 def configure_logging(output_dir: Path) -> logging.Logger:
@@ -732,7 +750,8 @@ def main() -> None:
     args = parse_args()
     start_clock = time.perf_counter()
     start_time = datetime.now(timezone.utc)
-    logger = configure_logging(OUTPUT_DIR)
+    output_dir = resolve_output_dir(args.output_subdir)
+    logger = configure_logging(output_dir)
     config = load_problem2_config(config_path_for_mode(args.mode))
     validate_config(config)
     theta_rad = GROUND_RADIUS_KM / R_EARTH_KM
@@ -770,14 +789,14 @@ def main() -> None:
                 scenario,
                 lambda _seed: evaluator,
                 args.seed + scenario_index * 100_000,
-                OUTPUT_DIR,
+                output_dir,
                 workers=args.workers,
                 resume=args.resume,
             )
             best = result.best
             histories[scenario] = result.history
             result.history.to_csv(
-                OUTPUT_DIR / f"ga_{scenario}_generation_history.csv", index=False
+                output_dir / f"ga_{scenario}_generation_history.csv", index=False
             )
             if not result.all_candidates.empty:
                 result.all_candidates["search_stage"] = "main_ga"
@@ -794,7 +813,7 @@ def main() -> None:
                     theta_rad,
                     args.seed + scenario_index * 100_000,
                     args.workers,
-                    OUTPUT_DIR,
+                    output_dir,
                     args.resume,
                     logger,
                 )
@@ -803,7 +822,7 @@ def main() -> None:
                     certification_candidates["scenario"] = scenario
                     all_candidate_frames.append(certification_candidates)
             certification_frame.to_csv(
-                OUTPUT_DIR / f"fixed_MN_certification_{scenario}.csv", index=False
+                output_dir / f"fixed_MN_certification_{scenario}.csv", index=False
             )
 
             if config["local_refinement"]["enabled"]:
@@ -853,7 +872,7 @@ def main() -> None:
             )
             metrics_frame = pd.DataFrame([{**best.record(), "validation_status": status}])
             write_solution_bundle(
-                OUTPUT_DIR,
+                output_dir,
                 scenario,
                 payload,
                 constellation,
@@ -887,11 +906,11 @@ def main() -> None:
                 combined_candidates["scenario"] == scenario
             ] if not combined_candidates.empty else pd.DataFrame()
             scenario_candidates.to_csv(
-                OUTPUT_DIR / f"ga_{scenario}_all_candidates.csv", index=False
+                output_dir / f"ga_{scenario}_all_candidates.csv", index=False
             )
 
         costs = build_cost_comparison(payloads)
-        costs.to_csv(OUTPUT_DIR / "cost_comparison.csv", index=False)
+        costs.to_csv(output_dir / "cost_comparison.csv", index=False)
 
         if args.skip_sensitivity:
             sensitivity = pd.DataFrame(
@@ -907,31 +926,31 @@ def main() -> None:
             sensitivity = run_sensitivity(
                 best_candidates, config, theta_rad, logger
             )
-        sensitivity.to_csv(OUTPUT_DIR / "resolution_sensitivity.csv", index=False)
-        apply_sensitivity_assessment(sensitivity, payloads, OUTPUT_DIR)
+        sensitivity.to_csv(output_dir / "resolution_sensitivity.csv", index=False)
+        apply_sensitivity_assessment(sensitivity, payloads, output_dir)
 
-        plot_region_grid(grid, OUTPUT_DIR)
+        plot_region_grid(grid, output_dir)
         preferred_scenario = "single" if "single" in constellations else scenarios[0]
-        plot_walker_layout_3d(constellations[preferred_scenario], OUTPUT_DIR)
+        plot_walker_layout_3d(constellations[preferred_scenario], output_dir)
         for scenario in scenarios:
-            plot_ground_tracks(constellations[scenario], scenario, OUTPUT_DIR)
-            plot_ga_convergence(histories[scenario], scenario, OUTPUT_DIR)
+            plot_ground_tracks(constellations[scenario], scenario, output_dir)
+            plot_ga_convergence(histories[scenario], scenario, output_dir)
             plot_solution_grid_fields(
-                detailed_results[scenario].grid_metrics, scenario, OUTPUT_DIR
+                detailed_results[scenario].grid_metrics, scenario, output_dir
             )
             plot_area_coverage_time(
-                detailed_results[scenario].time_metrics, scenario, OUTPUT_DIR
+                detailed_results[scenario].time_metrics, scenario, output_dir
             )
             counts = (
                 detailed_results[scenario].worst_single_counts
                 if scenario == "single"
                 else detailed_results[scenario].worst_double_counts
             )
-            plot_worst_snapshot(grid, counts, scenario, OUTPUT_DIR)
-        plot_mn_candidates(combined_candidates, OUTPUT_DIR)
-        plot_cost_comparison(costs, OUTPUT_DIR)
-        plot_resolution_sensitivity(sensitivity, OUTPUT_DIR)
-        write_method_notes(OUTPUT_DIR, config, PROJECT_ROOT, set(scenarios))
+            plot_worst_snapshot(grid, counts, scenario, output_dir)
+        plot_mn_candidates(combined_candidates, output_dir)
+        plot_cost_comparison(costs, output_dir)
+        plot_resolution_sensitivity(sensitivity, output_dir)
+        write_method_notes(output_dir, config, PROJECT_ROOT, set(scenarios))
         completed = True
     except KeyboardInterrupt:
         logger.warning("收到中断信号；遗传算法检查点已保存，可使用 --resume 恢复。")
@@ -939,7 +958,7 @@ def main() -> None:
     finally:
         elapsed = time.perf_counter() - start_clock
         write_metadata(
-            OUTPUT_DIR,
+            output_dir,
             args,
             config,
             start_time,
@@ -958,7 +977,7 @@ def main() -> None:
         )
     if args.mode == "quick":
         print("注意：quick 结果仅用于代码冒烟测试，不是论文最终优化结论。")
-    print(f"输出目录：{OUTPUT_DIR}")
+    print(f"输出目录：{output_dir}")
 
 
 if __name__ == "__main__":

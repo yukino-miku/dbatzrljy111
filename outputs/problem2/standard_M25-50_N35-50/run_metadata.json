@@ -1,0 +1,121 @@
+{
+  "started_at_utc": "2026-07-11T07:28:01.215291+00:00",
+  "finished_at_utc": "2026-07-11T07:28:59.932655+00:00",
+  "elapsed_seconds": 58.717337699999916,
+  "completed": true,
+  "mode": "standard",
+  "scenario": "both",
+  "seed": 20260710,
+  "workers": 1,
+  "resume": false,
+  "skip_certification": true,
+  "skip_sensitivity": false,
+  "output_dir": "C:\\Users\\25735\\Documents\\dbatzrljy111-problem2\\repo\\outputs\\problem2\\standard_M25-50_N35-50",
+  "config_file": "configs\\problem2_standard.json",
+  "config": {
+    "mode": "standard",
+    "description": "主要遗传算法优化配置",
+    "search_bounds": {
+      "M": [
+        25,
+        50
+      ],
+      "N": [
+        35,
+        50
+      ],
+      "inclination_deg": [
+        40.0,
+        60.0
+      ]
+    },
+    "region": {
+      "latitude_bounds_deg": [
+        4.0,
+        53.0
+      ],
+      "longitude_bounds_deg": [
+        73.0,
+        135.0
+      ]
+    },
+    "simulation": {
+      "simulation_days": 1.0,
+      "time_step_seconds": 120.0,
+      "grid_type": "equal_arc",
+      "equal_arc_spacing_km": 110.0,
+      "regular_grid_step_deg": 1.0,
+      "coverage_method": "auto",
+      "tolerance": 1e-12
+    },
+    "ga": {
+      "population_size": 80,
+      "generations": 100,
+      "elite_ratio": 0.08,
+      "tournament_size": 3,
+      "crossover_probability": 0.85,
+      "mutation_probability": 0.2,
+      "inclination_mutation_sigma_deg": 1.5,
+      "stagnation_generations": 20,
+      "stagnation_mutation_multiplier": 2.0,
+      "early_stop_generations": 35,
+      "random_seed_count": 3,
+      "cache_decimals": 5
+    },
+    "heuristic_initialization": {
+      "inclination_deg": [
+        49.0,
+        57.0
+      ],
+      "M": [
+        25,
+        50
+      ],
+      "N": [
+        35,
+        50
+      ],
+      "fully_random_ratio": 0.25
+    },
+    "certification": {
+      "enabled": true,
+      "satellite_margin": 12,
+      "max_pairs": 24,
+      "population_size": 40,
+      "generations": 30,
+      "random_seed_count": 2
+    },
+    "local_refinement": {
+      "enabled": true,
+      "max_iterations": 3,
+      "inclination_step_deg": 0.25,
+      "angle_step_deg": 0.5
+    },
+    "validation": {
+      "short_term": {
+        "simulation_days": 1.0,
+        "time_step_seconds": 60.0,
+        "regular_grid_step_deg": 0.5
+      },
+      "long_term": {
+        "simulation_days": 3.0,
+        "time_step_seconds": 120.0,
+        "equal_arc_spacing_km": 110.0
+      },
+      "max_candidates_to_validate": 4
+    }
+  },
+  "python_version": "3.14.0",
+  "numpy_version": "2.3.5",
+  "pandas_version": "2.3.3",
+  "scipy_version": "1.16.3",
+  "matplotlib_version": "3.10.7",
+  "result_status": {
+    "single": "validation_failed",
+    "double": "standard_search_passed_requires_full"
+  },
+  "disclaimer": "数值结果仅在记录的搜索范围、网格、时间采样和随机种子条件下成立；遗传算法结果不构成严格全局最优证明。",
+  "run_type": "standard_resolution_existing_candidate_evaluation",
+  "source_dir": "C:\\Users\\25735\\Documents\\dbatzrljy111-problem2\\repo\\outputs\\problem2\\standard_M25-50_N35-50",
+  "note": "This run re-evaluates existing candidates at the selected mode resolution; it is not a full GA search."
+}

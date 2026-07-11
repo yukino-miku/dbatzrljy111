@@ -1,0 +1,2 @@
+generation,seed,best_total_satellites,global_best_total_satellites,best_constraint_violation,global_best_constraint_violation,feasible_count,mean_constraint_violation,mean_total_satellites,min_total_satellites,max_total_satellites
+0,20260710,1496,1496,1.2212453270876722e-15,1.2212453270876722e-15,1,1.2212453270876722e-15,1496,1496,1496
