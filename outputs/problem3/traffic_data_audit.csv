@@ -1,0 +1,2 @@
+source_file,region_name,traffic_value,traffic_unit,converted_average_gbps,source_name,source_url,notes
+synthetic_demo,测试区域,12000.0,Gbps,12000.0,synthetic_demo,,仅用于 quick 代码验收，不是实际流量数据或论文结论。

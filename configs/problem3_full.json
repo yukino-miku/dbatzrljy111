@@ -1,0 +1,33 @@
+{
+  "mode": "full",
+  "description": "问题三高精度验证配置，计算耗时很长",
+  "constants": {
+    "D_ISL_MAX_KM": 5000.0,
+    "TAU_PROCESSING_MS": 0.5,
+    "C_ACCESS_GBPS": 20.0,
+    "LIGHT_SPEED_KM_S": 299792.458
+  },
+  "topology": {
+    "duration_orbits": 3.0,
+    "time_step_seconds": 10.0,
+    "crosslink_matching_method": "cyclic_shift"
+  },
+  "routing": {
+    "duration_hours": 24.0,
+    "time_step_seconds": 60.0,
+    "ground_grid_step_deg": 0.5,
+    "route_pair_count": 20000,
+    "exact_block_size": 256,
+    "heatmap_max_destinations": 14000
+  },
+  "traffic": {
+    "duration_hours": 24.0,
+    "time_step_seconds": 60.0,
+    "eta_sat": 1.0,
+    "eta_sat_label": "upper_bound_full_traffic_scenario",
+    "eta_sat_sensitivity": [0.001, 0.01, 0.05, 0.1, 1.0],
+    "traffic_profile_mode": "problem_spec",
+    "demo_mean_traffic_gbps": 12000.0,
+    "assignment_sample_max_rows": 20000
+  }
+}

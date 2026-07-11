@@ -109,6 +109,62 @@ python problem2_constellation_ga.py --mode standard --scenario both --resume
 
 固定 `M,N` 核验会把配置范围内的组合全部列入 CSV，并优先实际搜索当前卫星数以下且最接近下界的组合。默认 `max_pairs` 用于控制总运行时间，未运行组合会明确标记；将其改为 `null` 可执行穷举式核验，但可能需要很长时间。
 
+## 问题三：星间链路与通信路由优化
+
+问题三固定读取 `outputs/problem2/` 中的 Problem 2 Standard 单重覆盖星座，不重新搜索轨道面数、卫星数、倾角或相位参数。程序递归发现候选文件；若存在多套同优先级且参数不同的星座，会停止并要求使用 `--constellation-file` 指定，不会静默猜测。
+
+安装依赖后运行：
+
+```powershell
+python problem3_network_routing.py --mode quick --stage all --allow-demo-traffic
+python problem3_network_routing.py --mode standard --stage topology
+python problem3_network_routing.py --mode standard --stage routing --pair-mode sampled
+python problem3_network_routing.py --mode standard --stage traffic --traffic-file <实际流量CSV>
+```
+
+也可以只运行一个阶段：
+
+```powershell
+python problem3_network_routing.py --stage topology
+python problem3_network_routing.py --stage routing
+python problem3_network_routing.py --stage traffic
+```
+
+常用参数：
+
+- `--constellation-file <JSON>`：手工指定 Problem 2 星座输出。
+- `--traffic-file <CSV>`：提供可核验的实际流量数据。
+- `--pair-mode sampled|exact`：面积加权点对抽样或离散网格全部点对分块计算。
+- `--seed`：固定抽样和基准分配顺序。
+- `--workers`：并行生成不同时间的拓扑快照。
+- `--resume`：已有对应阶段汇总文件时跳过该阶段。
+- `--allow-demo-traffic`：仅允许在 Quick 模式显式启用 `synthetic_demo` 流量。
+
+三级精度配置位于 `configs/problem3_quick.json`、`configs/problem3_standard.json` 和 `configs/problem3_full.json`：
+
+- `quick`：一个轨道周期、粗网格和少量点对，只用于代码冒烟测试，不能作为论文最终结论。
+- `standard`：两个轨道周期的拓扑、24 h 路由和中等网格，是主要计算配置。
+- `full`：更密时间步长、0.5° 网格和更多点对，计算耗时很长，用于高精度验证。
+
+真实流量模板和字段说明位于：
+
+- `data/external/problem3_traffic_data_template.csv`
+- `data/external/problem3_traffic_data_README.md`
+
+Standard 或 Full 未提供真实 `--traffic-file` 时，拓扑和路由仍可运行，流量阶段写入 `status=skipped_missing_real_data` 并清除旧演示流量图，不会编造论文结果。`eta_sat=1` 仅表示“全部区域流量由卫星承载”的压力上界情景，不代表现实市场占有率。
+
+主要输出位于 `outputs/problem3/`：
+
+- `selected_problem2_constellation.json`、`satellite_id_mapping.csv`：实际采用的 Problem 2 文件、SHA-256、星座参数和卫星编号。
+- `topology_summary.json`、`topology_timeseries.csv`、`link_timeseries.csv`、`link_availability.csv`：时变拓扑、距离、连通性和链路可用率。
+- `crosslink_shift_timeseries.csv`、`satellite_degree_timeseries.csv`、`topology_snapshot_edges.csv`：跨轨循环偏移、节点度和代表快照。
+- `routing_summary.json`、`routing_time_metrics.csv`、`route_pair_samples.csv`、`worst_delay_route.json`：平均、分位、最大时延及最差路径。
+- `traffic_summary.json`、`traffic_timeseries.csv`、`satellite_load_timeseries.csv`、`flow_engineering_comparison.csv`：真实流量审计、公平准入、负载和基准对比。
+- `fig_problem3_*.png`：拓扑、链路、路由、时延和流量工程中文图表，均为实际计算输出，300 dpi。
+- `problem3_method_notes.md`、`docs/report/problem3_method_notes.md`：自动插入实际结果的论文方法说明。
+
+模型必须区分两类容量：星间链路是否存在由 `5000 km` 距离和地球视线条件决定；单颗卫星可接入多少地面流量由 `20 Gbps` 限制。题目没有提供每条激光 ISL 的容量，因此当前主模型不分析 ISL 内部带宽拥塞，只让 ISL 影响路径与时延；后续获得链路容量后可扩展为多商品流模型。
+
 ## 工作约定
 
 1. 先记录假设和符号，再写模型与代码。
