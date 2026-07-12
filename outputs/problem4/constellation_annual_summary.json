@@ -1,0 +1,15 @@
+{
+  "mode": "standard",
+  "total_satellites": 1840,
+  "mc_years": 1000,
+  "mean_annual_avoidance_count": 16159.486,
+  "std_annual_avoidance_count": 124.97341380532964,
+  "q05_annual_avoidance_count": 15951.95,
+  "median_annual_avoidance_count": 16158.0,
+  "q95_annual_avoidance_count": 16360.1,
+  "mean_annual_avoidance_cost_cny": 323189720.0,
+  "std_annual_avoidance_cost_cny": 2499468.276106593,
+  "expected_annual_failure_count": 0.008836529916732734,
+  "monte_carlo_mean_annual_failure_count": 0.01,
+  "poisson_failure_hazard_mean": 0.008836551135349846
+}

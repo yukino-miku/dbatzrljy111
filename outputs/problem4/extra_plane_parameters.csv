@@ -1,0 +1,4 @@
+extra_plane_count,extra_plane_index,raan_deg,phase_offset_deg,satellite_count,baseline_coverage_availability,minimum_coverage_multiplicity,mean_coverage_multiplicity,critical_maneuver_fraction
+1,1,62.09413675096502,1.9565217391304348,46,1.0,2,3.7750602863298766,0.0
+2,2,8.094136750965014,5.869565217391305,46,1.0,2,3.867504565878074,0.0
+3,3,17.094136750965014,5.869565217391305,46,1.0,2,3.959788468243168,0.0

@@ -368,7 +368,7 @@ def fair_access_allocation(
     demands_gbps: np.ndarray,
     visibility: np.ndarray,
     *,
-    capacity_gbps: float = C_ACCESS_GBPS,
+    capacity_gbps: float | np.ndarray = C_ACCESS_GBPS,
     assignment_cost_ms: np.ndarray | None = None,
     balance_tolerance: float = 1e-7,
 ) -> AccessAllocation:
@@ -381,6 +381,14 @@ def fair_access_allocation(
     if np.any(demands < -1e-12):
         raise ValueError("Ground demands must be nonnegative.")
     ground_count, satellite_count = visible.shape
+    capacities = np.asarray(capacity_gbps, dtype=float)
+    if capacities.ndim == 0:
+        capacities = np.full(satellite_count, float(capacities), dtype=float)
+    if capacities.shape != (satellite_count,):
+        raise ValueError("capacity_gbps must be a scalar or one value per satellite.")
+    if np.any(capacities < -1e-12):
+        raise ValueError("Satellite capacities must be nonnegative.")
+    capacities = np.maximum(capacities, 0.0)
     ground_index, satellite_index = _visible_edges(visible)
     edge_count = len(ground_index)
     total_demand = float(demands.sum())
@@ -409,7 +417,7 @@ def fair_access_allocation(
     stage1 = linprog(
         c,
         A_ub=A_ub,
-        b_ub=np.full(satellite_count, float(capacity_gbps)),
+        b_ub=capacities,
         A_eq=A_eq,
         b_eq=np.zeros(ground_count),
         bounds=[(0.0, None)] * edge_count + [(0.0, 1.0)],
@@ -428,7 +436,7 @@ def fair_access_allocation(
         (np.arange(edge_count), np.full(satellite_count, edge_count))
     )
     data = np.concatenate(
-        (np.ones(edge_count), np.full(satellite_count, -float(capacity_gbps)))
+        (np.ones(edge_count), -capacities)
     )
     A_ub2 = coo_matrix(
         (data, (rows, cols)), shape=(satellite_count, variable_count2)
@@ -463,13 +471,13 @@ def fair_access_allocation(
         ),
         shape=(satellite_count, edge_count),
     ).tocsr()
-    capacity_limit = float(capacity_gbps) * min(
+    capacity_limit = capacities * min(
         1.0, maximum_utilization + float(balance_tolerance)
     )
     stage3 = linprog(
         edge_cost,
         A_ub=A_ub3,
-        b_ub=np.full(satellite_count, capacity_limit),
+        b_ub=capacity_limit,
         A_eq=_ground_equality_matrix(ground_index, ground_count, edge_count),
         b_eq=b_eq2,
         bounds=[(0.0, None)] * edge_count,
@@ -482,8 +490,14 @@ def fair_access_allocation(
     ground_served = np.bincount(
         ground_index, weights=flows, minlength=ground_count
     ).astype(float)
-    if np.max(loads, initial=0.0) > float(capacity_gbps) + 1e-5:
+    if np.any(loads > capacities + 1e-5):
         raise RuntimeError("优化结果违反单星接入容量。")
+    utilizations = np.divide(
+        loads,
+        capacities,
+        out=np.zeros_like(loads),
+        where=capacities > 0.0,
+    )
     assignments = pd.DataFrame(
         {
             "ground_index": ground_index,
@@ -498,8 +512,8 @@ def fair_access_allocation(
         service_ratio=service_ratio,
         throughput_gbps=throughput,
         blocked_gbps=max(0.0, total_demand - throughput),
-        maximum_utilization=float(np.max(loads, initial=0.0) / capacity_gbps),
-        utilization_standard_deviation=float(np.std(loads / capacity_gbps)),
+        maximum_utilization=float(np.max(utilizations, initial=0.0)),
+        utilization_standard_deviation=float(np.std(utilizations)),
         assignments=assignments,
         satellite_loads_gbps=loads,
         ground_served_gbps=ground_served,

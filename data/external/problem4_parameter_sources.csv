@@ -1,0 +1,31 @@
+parameter_name,baseline_value,unit,source_type,source_name,source_url,recorded_date,is_problem_given,is_assumption,sensitivity_values,notes
+orbit_altitude,550,km,前问Standard结果,问题三所选二重覆盖星座,,2026-07-12,false,false,,由实际selected_problem2_constellation.json读取
+debris_number_density,1e-8,1/km^3,题目直接给定,数学建模赛题,,2026-07-12,true,false,,直径不小于1 cm碎片数密度
+minimum_debris_diameter,0.01,m,题目直接给定,数学建模赛题,,2026-07-12,true,false,,数密度口径下界
+maximum_debris_diameter,1.0,m,建模假设,有限幂律截断上界,,2026-07-12,false,true,,用于使尺寸分布可归一化
+debris_power_law_beta,2.5,dimensionless,建模假设,截断幂律基准,,2026-07-12,false,true,2.0;2.5;3.0,未声称为题目给定或已核验文献数据
+effective_projected_area,15,m^2,建模假设,平均有效投影面积基准,,2026-07-12,false,true,5;10;15;20;30,不是卫星本体表面积或太阳翼总面积
+relative_velocity_mean,10,km/s,建模假设,截断正态速度基准,,2026-07-12,false,true,7;10;14,分布截断在5到15 km/s
+relative_velocity_std,2,km/s,建模假设,截断正态速度基准,,2026-07-12,false,true,,
+screen_radius,5,km,建模假设,候选交会筛选半径,,2026-07-12,false,true,2;5;10,不是实体碰撞半径
+warning_time,6;72;168,h,建模假设,三角分布最小值众数最大值,,2026-07-12,false,true,短;基准;长,题目未给预警时间分布
+minimum_maneuver_warning,6,h,建模假设,可执行机动时间门槛,,2026-07-12,false,true,,
+sigma0,0.05,km,建模假设,交会平面位置误差基准,,2026-07-12,false,true,0.025;0.05;0.10,二维各向同性高斯近似
+k_sigma,0.005,km/h,建模假设,预警外推误差增长率,,2026-07-12,false,true,0.0025;0.005;0.010,
+avoidance_threshold,1e-6,dimensionless,建模假设,自动避撞风险阈值,,2026-07-12,false,true,1e-4;1e-5;1e-6,阈值作用于单次交会预测概率
+maximum_delta_v,1,m/s,题目直接给定,数学建模赛题,,2026-07-12,true,false,,单次机动上限
+maneuver_cost,20000,CNY/event,题目直接给定,数学建模赛题,,2026-07-12,true,false,,
+maneuver_capacity_factor,0.5,dimensionless,题目直接给定,数学建模赛题,,2026-07-12,true,false,,避撞期间通信能力下降50%
+collision_failure_probability,1.0,dimensionless,保守建模假设,高速碎片碰撞失效条件概率上界,,2026-07-12,false,true,0.5;0.8;1.0,不得解释为现实中所有碰撞必然失效
+detection_probability,1.0,dimensionless,理想建模假设,理想检测预警基准,,2026-07-12,false,true,0.7;0.9;1.0,未发现事件保留完整风险
+satellite_mass,227,kg,题目直接给定,数学建模赛题,,2026-07-12,true,false,,
+thrust,0.1,N,建模假设,氪离子推进器等效推力,,2026-07-12,false,true,0.05;0.10;0.20,题目未给推力
+recovery_overhead,1,h,建模假设,姿态天线和重新定轨恢复时间,,2026-07-12,false,true,0.5;1;2,与推进器点火时间分开
+in_plane_adjustment,7,day,题目直接给定,数学建模赛题,,2026-07-12,true,false,,失效后同轨调整填补空缺
+normal_access_capacity,20,Gbps/satellite,题目直接给定,数学建模赛题,,2026-07-12,true,false,,继承问题三LP容量约束
+satellite_manufacturing_cost,5000000,CNY/satellite,题目直接给定,数学建模赛题,,2026-07-12,true,false,,
+launch_capacity,60,satellite/launch,题目直接给定,数学建模赛题,,2026-07-12,true,false,,
+launch_cost,200000000,CNY/launch,题目直接给定,数学建模赛题,,2026-07-12,true,false,,
+design_life,5,year,题目直接给定,数学建模赛题,,2026-07-12,true,false,,
+in_orbit_takeover_delay,6,h,建模假设,在轨备用接替延迟,,2026-07-12,false,true,0;6;24,
+ground_replacement_delay,60,day,建模假设,地面备用准备发射和入轨时间,,2026-07-12,false,true,30;60;90,

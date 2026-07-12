@@ -1,0 +1,81 @@
+{
+  "source_directory": "outputs/problem3/standard_run_20260711",
+  "metadata_file": "outputs/problem3/standard_run_20260711/problem3_run_metadata.json",
+  "metadata_sha256": "e3d1b4bf4449b66eee194cb78b782cb9bcd644c8ca901b4a007748c3ab69749a",
+  "topology_summary_file": "outputs/problem3/standard_run_20260711/topology_summary.json",
+  "routing_summary_file": "outputs/problem3/standard_run_20260711/routing_summary.json",
+  "traffic_summary_file": "outputs/problem3/standard_run_20260711/traffic_summary.json",
+  "mode": "standard",
+  "completed": true,
+  "M": 40,
+  "N": 46,
+  "total_satellites": 1840,
+  "constellation_signature": "standard_double_M40_N46_S1840",
+  "inclination_deg": 50.331343634531606,
+  "phase_factor_F": 28,
+  "Omega0_deg": 3.594136750965014,
+  "u0_deg": 4.295683725698838,
+  "altitude_km": 550.0,
+  "theta_deg": 4.550567325948776,
+  "problem3_mean_delay_ms": 19.612539787101376,
+  "problem3_p95_delay_ms": 34.959888016198875,
+  "problem3_max_delay_ms": 48.29514879250251,
+  "problem3_ratio_below_30ms": 0.8753333333333333,
+  "problem3_mean_throughput_tbps": 2.6338878490082287,
+  "problem3_mean_service_ratio": 0.013530061289848886,
+  "problem3_peak_service_ratio": 0.007857183691521514,
+  "problem3_max_satellite_utilization": 1.0000000000000213,
+  "stage_status": {
+    "topology": "resumed_existing_output",
+    "routing": "resumed_existing_output",
+    "traffic": "resumed_existing_output"
+  },
+  "traffic_status": "user_given_region_density",
+  "selection_reason": "在 2 个候选中选择唯一合格的 Standard 结果；mode、星座签名和规模均匹配。元数据记录 resumed_existing_output，但三个阶段的 JSON/CSV 均存在且 traffic_summary 明确为用户给定区域流量密度，因此认定为已完成结果的恢复校验，而不是 Quick 替代。",
+  "candidate_audit": [
+    {
+      "source_directory": "outputs/problem3",
+      "metadata_file": "outputs/problem3/problem3_run_metadata.json",
+      "mode": "quick",
+      "completed": true,
+      "stage_status": {
+        "topology": "completed",
+        "routing": "completed",
+        "traffic": "user_given_region_density"
+      },
+      "M": 40,
+      "N": 46,
+      "total_satellites": 1840,
+      "constellation_signature": "standard_double_M40_N46_S1840",
+      "constellation_scenario": "double",
+      "traffic_status": "user_given_region_density",
+      "finished_at_utc": "2026-07-11T10:03:13.819000+00:00",
+      "missing_files": [],
+      "eligible": false,
+      "eligibility_reason": "不合格：mode_standard",
+      "field_completeness": 8
+    },
+    {
+      "source_directory": "outputs/problem3/standard_run_20260711",
+      "metadata_file": "outputs/problem3/standard_run_20260711/problem3_run_metadata.json",
+      "mode": "standard",
+      "completed": true,
+      "stage_status": {
+        "topology": "resumed_existing_output",
+        "routing": "resumed_existing_output",
+        "traffic": "resumed_existing_output"
+      },
+      "M": 40,
+      "N": 46,
+      "total_satellites": 1840,
+      "constellation_signature": "standard_double_M40_N46_S1840",
+      "constellation_scenario": "double",
+      "traffic_status": "user_given_region_density",
+      "finished_at_utc": "2026-07-11T11:06:09.717066+00:00",
+      "missing_files": [],
+      "eligible": true,
+      "eligibility_reason": "合格 Standard；阶段由 --resume 读取，已通过同目录完整产物复核",
+      "field_completeness": 8
+    }
+  ]
+}

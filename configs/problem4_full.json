@@ -1,0 +1,17 @@
+{
+  "mode": "full",
+  "description": "问题四高精度复核配置，计算时间和存储需求很高",
+  "debris": {"number_density_km3": 1e-8, "D0_m": 0.01, "Dmax_m": 1.0, "beta": 2.5, "beta_sensitivity": [2.0, 2.25, 2.5, 2.75, 3.0]},
+  "satellite": {"effective_area_m2": 15.0, "effective_area_sensitivity_m2": [5.0, 10.0, 15.0, 20.0, 30.0]},
+  "velocity": {"mean_km_s": 10.0, "std_km_s": 2.0, "lower_km_s": 5.0, "upper_km_s": 15.0, "mean_sensitivity_km_s": [7.0, 10.0, 14.0]},
+  "conjunction": {"screen_radius_km": 5.0, "screen_radius_sensitivity_km": [2.0, 5.0, 10.0], "consistency_tolerance": 0.03},
+  "warning": {"minimum_hours": 6.0, "mode_hours": 72.0, "maximum_hours": 168.0, "minimum_maneuver_hours": 6.0, "scenarios": {"短预警": [1.0, 12.0, 48.0], "基准预警": [6.0, 72.0, 168.0], "长预警": [24.0, 120.0, 336.0]}},
+  "uncertainty": {"sigma0_km": 0.05, "k_sigma_km_per_hour": 0.005, "scenarios": {"低不确定性": [0.025, 0.0025], "基准不确定性": [0.05, 0.005], "高不确定性": [0.10, 0.010]}},
+  "avoidance": {"threshold": 1e-6, "threshold_sensitivity": [1e-4, 1e-5, 1e-6], "target_probability_factor": 0.1, "delta_v_max_mps": 1.0, "displacement_factor": 1.0, "execution_error_std": 0.02, "execution_error_std_sensitivity": [0.0, 0.02, 0.05], "detection_probability": 1.0, "detection_probability_sensitivity": [0.7, 0.9, 1.0], "conditional_failure_probability": 1.0, "conditional_failure_sensitivity": [0.5, 0.8, 1.0]},
+  "capacity": {"satellite_mass_kg": 227.0, "normal_capacity_gbps": 20.0, "maneuver_capacity_factor": 0.5, "thrust_n": 0.1, "thrust_sensitivity_n": [0.05, 0.1, 0.2], "recovery_overhead_hours": 1.0, "overhead_sensitivity_hours": [0.5, 1.0, 2.0]},
+  "costs": {"maneuver_cost_cny": 20000.0, "satellite_manufacturing_cost_cny": 5000000.0, "launch_cost_cny": 200000000.0, "launch_capacity_satellites": 60, "design_life_years": 5.0},
+  "reliability": {"mc_years": 5000, "coverage_time_step_minutes": 10.0, "coverage_grid_step_deg": 0.5, "representative_hours": 24.0, "in_plane_adjustment_days": 7.0, "mean_target": 0.99, "robust_quantile": 0.05},
+  "redundancy": {"max_k_per_plane": 4, "max_extra_planes": 4, "ground_spare_values": [0, 1, 5, 10, 20, 40, 60, 120], "takeover_hours": 6.0, "ground_replacement_days": 60.0, "standby_risk_factor": 1.0, "extra_plane_phase_candidates": 16},
+  "traffic_impact": {"grid_step_deg": 0.5},
+  "precision": {"risk_event_samples": 5000000, "risk_mc_batches": 50, "event_output_rows": 200000, "sensitivity_enabled": true}
+}

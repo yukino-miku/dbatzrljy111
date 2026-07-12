@@ -1,0 +1,9 @@
+{
+  "nominal_total_access_capacity_gbps": 36800.0,
+  "maneuver_analytical_capacity_loss_ratio": 0.0005018227337449388,
+  "maneuver_mc_capacity_loss_ratio": 0.0004986639476457573,
+  "total_mc_capacity_loss_ratio_including_failures": 0.0004986639476456389,
+  "annual_equivalent_maneuver_capacity_loss_gbps_h": 161771.59103188844,
+  "annual_equivalent_maneuver_capacity_loss_tbps_h": 161.77159103188845,
+  "analytical_mc_relative_error": 0.006294625346302048
+}

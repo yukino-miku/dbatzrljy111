@@ -1,0 +1,36 @@
+{
+  "flux_collision_rate_per_second": 1.5114651568393079e-12,
+  "conjunction_rate_per_second": 7.853981633974482e-06,
+  "mean_annual_conjunctions": 247.68316480901927,
+  "mean_predicted_collision_probability_per_conjunction": 1.9140502674997787e-07,
+  "conjunction_integrated_collision_rate_per_second": 1.5032915647447206e-12,
+  "relative_consistency_error": 0.005407727765077563,
+  "configured_tolerance": 0.05,
+  "passes_standard_tolerance": true,
+  "screen_radius_km": 5.0,
+  "screen_radius_stability": [
+    {
+      "screen_radius_km": 2.0,
+      "flux_collision_rate_per_second": 1.5114651568393079e-12,
+      "conjunction_integrated_collision_rate_per_second": 1.508117655710274e-12,
+      "relative_consistency_error": 0.0022147391978482277,
+      "expected_annual_maneuvers": 8.775909895513172
+    },
+    {
+      "screen_radius_km": 5.0,
+      "flux_collision_rate_per_second": 1.5114651568393079e-12,
+      "conjunction_integrated_collision_rate_per_second": 1.5567623661880642e-12,
+      "relative_consistency_error": 0.029969072819038274,
+      "expected_annual_maneuvers": 8.8645804685148
+    },
+    {
+      "screen_radius_km": 10.0,
+      "flux_collision_rate_per_second": 1.5114651568393079e-12,
+      "conjunction_integrated_collision_rate_per_second": 1.48215805560177e-12,
+      "relative_consistency_error": 0.019389862283576063,
+      "expected_annual_maneuvers": 8.629281461946233
+    }
+  ],
+  "flux_collision_rate": 1.5114651568393079e-12,
+  "conjunction_integrated_collision_rate": 1.5032915647447206e-12
+}

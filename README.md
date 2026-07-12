@@ -165,6 +165,66 @@ python problem3_network_routing.py --stage traffic
 
 模型必须区分两类容量：星间链路是否存在由 `5000 km` 距离和地球视线条件决定；单颗卫星可接入多少地面流量由 `20 Gbps` 限制。题目没有提供每条激光 ISL 的容量，因此当前主模型不分析 ISL 内部带宽拥塞，只让 ISL 影响路径与时延；后续获得链路容量后可扩展为多商品流模型。
 
+## 问题四：碎片规避与星座鲁棒性设计
+
+问题四固定继承问题二 Standard 二重覆盖星座以及问题三 Standard 通信结果。程序会递归审计 `outputs/problem3/**/problem3_run_metadata.json`，核对 `mode=standard`、完成状态、`M=40, N=46, S=1840`、星座签名和全部阶段产物。根目录 Quick 结果不会被正式运行自动选用。实际候选、元数据 SHA-256 和选择理由写入 `outputs/problem4/selected_problem3_standard.json`。
+
+安装依赖后运行：
+
+```powershell
+python problem4_debris_robustness.py --mode quick
+python problem4_debris_robustness.py --mode standard
+python problem4_debris_robustness.py --mode full
+```
+
+默认执行 `standard --stage all`。也可以分阶段运行：
+
+```powershell
+python problem4_debris_robustness.py --mode quick --stage risk --force
+python problem4_debris_robustness.py --mode quick --stage constellation --resume
+python problem4_debris_robustness.py --mode quick --stage redundancy --resume
+```
+
+- `risk`：碎片尺寸和速度分布、候选交会、非中心卡方单次碰撞概率、避撞阈值、Delta-v 和残余风险。
+- `constellation`：1840 星年度避撞次数、成本、通信降级、容量损失以及问题三逐星容量 LP 复算。
+- `redundancy`：稀疏覆盖矩阵、全年事件驱动蒙特卡洛、三类冗余方案、五年成本和 Pareto 前沿。
+
+常用参数：
+
+- `--problem3-dir <目录>`：明确指定待审计的问题三 Standard 目录。
+- `--config <JSON>`：在所选精度默认配置上覆盖参数。
+- `--seed`、`--mc-runs`、`--threshold`：控制随机种子、可靠性年份和基准避撞阈值。
+- `--resume`：跳过同一模式下已完成的阶段；不同模式不会复用前一模式的风险结果。
+- `--force`：仅清理并重建 `outputs/problem4/`，不会改动问题一至三输出。
+- `--no-traffic-impact`：跳过问题三 LP 复算，适合仅调试风险模型；完整图表和论文说明需要保留业务影响计算。
+
+三级配置位于 `configs/problem4_quick.json`、`configs/problem4_standard.json` 和 `configs/problem4_full.json`：
+
+- `quick`：2 万交会样本、50 个可靠性年份、120 min/3° 覆盖采样，仅用于冒烟测试。
+- `standard`：100 万交会样本、1000 个可靠性年份、30 min/1° 覆盖采样，是论文主要配置。
+- `full`：500 万交会样本、5000 个可靠性年份、10 min/0.5° 覆盖采样，用于高精度复核，耗时和内存需求很高。
+
+模型严格区分长期通量碰撞危险度、单次近距离交会预测概率和碰撞后的条件失效概率。候选事件率为 $n\pi B^2E[V]$；单次预测概率使用二维各向同性高斯对应的非中心卡方分布；机动通过改变预测最近距离重新计算残余概率，不把风险直接设为零。降级时间由 $m\Delta v/F$ 点火时间与姿态、天线和重新定轨恢复开销组成。
+
+第三小问比较三类方案：每轨在轨备用、在原 RAAN 最大间隙加入额外轨道面、地面库存补充；还会枚举受控范围内的混合方案。主判据为平均全年基本覆盖可用率不低于 99%，同时报告 5% 分位不低于 99% 的鲁棒判据。这里的“基本覆盖”不是问题三高流量需求的全部满足比例。
+
+参数来源和假设记录在：
+
+- `data/external/problem4_parameter_sources.csv`
+- `data/external/problem4_parameter_assumptions.md`
+
+主要输出位于 `outputs/problem4/`：
+
+- `single_satellite_risk_summary.json`、`single_satellite_threshold_comparison.csv`、`risk_model_consistency.json`、`risk_sensitivity.csv`：单星年度风险、阈值和通量一致性。
+- `collision_event_samples.csv`、`maneuver_delta_v_distribution.csv`、`maneuver_duration_distribution.csv`：可审计事件样本和机动分布。
+- `constellation_annual_summary.json`、`annual_avoidance_distribution.csv`、`capacity_loss_summary.json`：星座年度次数、成本与容量损失。
+- `problem3_service_impact.csv`：正常、避撞、条件失效和备用接替状态下的问题三 LP 结果。
+- `redundancy_monte_carlo_summary.csv`、`redundancy_year_samples.csv`、`redundancy_pareto_front.csv`、`best_redundancy_solution.json`：可靠性、成本和最优方案。
+- `fig_problem4_*.png`：碎片、碰撞、避撞、容量、通信影响、可靠性、成本与敏感性中文图表，均为 300 dpi。
+- `problem4_method_notes.md`、`docs/report/problem4_method_notes.md`：自动读取本次实际结果生成的论文方法与结果说明。
+
+Standard 和 Full 运行过慢时，可按 `risk`、`constellation`、`redundancy` 顺序运行并使用 `--resume`。程序捕获中断并保留已完成阶段元数据，不会静默降低为 Quick 参数。
+
 ## 工作约定
 
 1. 先记录假设和符号，再写模型与代码。

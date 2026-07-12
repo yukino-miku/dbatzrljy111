@@ -1,0 +1,207 @@
+{
+  "started_at_utc": "2026-07-12T04:40:25.145433+00:00",
+  "finished_at_utc": "2026-07-12T04:41:09.209670+00:00",
+  "elapsed_seconds": 44.06422030000067,
+  "completed": true,
+  "mode": "standard",
+  "stage": "redundancy",
+  "seed": 20260712,
+  "workers": 4,
+  "resume": false,
+  "force": false,
+  "mc_runs_override": null,
+  "threshold_override": null,
+  "no_traffic_impact": false,
+  "stage_status": {
+    "risk": "completed",
+    "constellation": "completed",
+    "redundancy": "completed"
+  },
+  "selected_problem3_source": "outputs/problem3/standard_run_20260711",
+  "constellation_signature": "standard_double_M40_N46_S1840",
+  "M": 40,
+  "N": 46,
+  "total_satellites": 1840,
+  "config": {
+    "mode": "standard",
+    "description": "问题四论文主要计算配置",
+    "debris": {
+      "number_density_km3": 1e-08,
+      "D0_m": 0.01,
+      "Dmax_m": 1.0,
+      "beta": 2.5,
+      "beta_sensitivity": [
+        2.0,
+        2.5,
+        3.0
+      ]
+    },
+    "satellite": {
+      "effective_area_m2": 15.0,
+      "effective_area_sensitivity_m2": [
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        30.0
+      ]
+    },
+    "velocity": {
+      "mean_km_s": 10.0,
+      "std_km_s": 2.0,
+      "lower_km_s": 5.0,
+      "upper_km_s": 15.0,
+      "mean_sensitivity_km_s": [
+        7.0,
+        10.0,
+        14.0
+      ]
+    },
+    "conjunction": {
+      "screen_radius_km": 5.0,
+      "screen_radius_sensitivity_km": [
+        2.0,
+        5.0,
+        10.0
+      ],
+      "consistency_tolerance": 0.05
+    },
+    "warning": {
+      "minimum_hours": 6.0,
+      "mode_hours": 72.0,
+      "maximum_hours": 168.0,
+      "minimum_maneuver_hours": 6.0,
+      "scenarios": {
+        "短预警": [
+          1.0,
+          12.0,
+          48.0
+        ],
+        "基准预警": [
+          6.0,
+          72.0,
+          168.0
+        ],
+        "长预警": [
+          24.0,
+          120.0,
+          336.0
+        ]
+      }
+    },
+    "uncertainty": {
+      "sigma0_km": 0.05,
+      "k_sigma_km_per_hour": 0.005,
+      "scenarios": {
+        "低不确定性": [
+          0.025,
+          0.0025
+        ],
+        "基准不确定性": [
+          0.05,
+          0.005
+        ],
+        "高不确定性": [
+          0.1,
+          0.01
+        ]
+      }
+    },
+    "avoidance": {
+      "threshold": 1e-06,
+      "threshold_sensitivity": [
+        0.0001,
+        1e-05,
+        1e-06
+      ],
+      "target_probability_factor": 0.1,
+      "delta_v_max_mps": 1.0,
+      "displacement_factor": 1.0,
+      "execution_error_std": 0.02,
+      "execution_error_std_sensitivity": [
+        0.0,
+        0.02,
+        0.05
+      ],
+      "detection_probability": 1.0,
+      "detection_probability_sensitivity": [
+        0.7,
+        0.9,
+        1.0
+      ],
+      "conditional_failure_probability": 1.0,
+      "conditional_failure_sensitivity": [
+        0.5,
+        0.8,
+        1.0
+      ]
+    },
+    "capacity": {
+      "satellite_mass_kg": 227.0,
+      "normal_capacity_gbps": 20.0,
+      "maneuver_capacity_factor": 0.5,
+      "thrust_n": 0.1,
+      "thrust_sensitivity_n": [
+        0.05,
+        0.1,
+        0.2
+      ],
+      "recovery_overhead_hours": 1.0,
+      "overhead_sensitivity_hours": [
+        0.5,
+        1.0,
+        2.0
+      ]
+    },
+    "costs": {
+      "maneuver_cost_cny": 20000.0,
+      "satellite_manufacturing_cost_cny": 5000000.0,
+      "launch_cost_cny": 200000000.0,
+      "launch_capacity_satellites": 60,
+      "design_life_years": 5.0
+    },
+    "reliability": {
+      "mc_years": 1000,
+      "coverage_time_step_minutes": 30.0,
+      "coverage_grid_step_deg": 1.0,
+      "representative_hours": 24.0,
+      "in_plane_adjustment_days": 7.0,
+      "mean_target": 0.99,
+      "robust_quantile": 0.05
+    },
+    "redundancy": {
+      "max_k_per_plane": 3,
+      "max_extra_planes": 3,
+      "ground_spare_values": [
+        0,
+        1,
+        5,
+        10,
+        20,
+        40,
+        60
+      ],
+      "takeover_hours": 6.0,
+      "ground_replacement_days": 60.0,
+      "standby_risk_factor": 1.0,
+      "extra_plane_phase_candidates": 8
+    },
+    "traffic_impact": {
+      "grid_step_deg": 1.0
+    },
+    "precision": {
+      "risk_event_samples": 1000000,
+      "risk_mc_batches": 20,
+      "event_output_rows": 100000,
+      "sensitivity_enabled": true
+    }
+  },
+  "python_version": "3.13.6",
+  "numpy_version": "2.4.4",
+  "pandas_version": "3.0.2",
+  "scipy_version": "1.17.1",
+  "matplotlib_version": "3.10.8",
+  "error": null,
+  "formal_result": true,
+  "disclaimer": "Quick 仅用于代码验收，不得作为论文正式数值结论。"
+}
